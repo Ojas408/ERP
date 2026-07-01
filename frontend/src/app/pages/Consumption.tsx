@@ -1,0 +1,306 @@
+import { useEffect, useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { KPICard } from "../components/dashboard/kpi-card"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
+import { Badge } from "../components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Fuel, Package, Hammer, Mountain, Download, Plus, Edit, Trash2, RefreshCw } from "lucide-react"
+import { fetchConsumptions, createConsumption, fetchSites, deleteRecord, updateRecord } from "../services/api"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "../components/ui/dialog"
+import { Input } from "../components/ui/input"
+import { Label } from "../components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
+
+export default function Consumption() {
+  const [consumptions, setConsumptions] = useState<any[]>([])
+  const [sites, setSites] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
+  const [newCons, setNewCons] = useState({
+    material: "Diesel",
+    amount: "",
+    unit: "Liters",
+    siteId: "",
+    date: new Date().toISOString().split('T')[0],
+    isRejected: false,
+    rejectionReason: ""
+  })
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      const [consData, siteData] = await Promise.all([
+        fetchConsumptions(),
+        fetchSites()
+      ])
+      setConsumptions(Array.isArray(consData) ? consData : [])
+      setSites(Array.isArray(siteData) ? siteData : [])
+    } catch (error) {
+      console.error("Failed to load consumption data:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAdd = async (e: React.FormEvent) => {
+    e.preventDefault()
+    try {
+      await createConsumption({
+        ...newCons,
+        amount: parseFloat(newCons.amount) || 0
+      })
+      setIsAddOpen(false)
+      setNewCons({
+        material: "Diesel",
+        amount: "",
+        unit: "Liters",
+        siteId: "",
+        date: new Date().toISOString().split('T')[0],
+        isRejected: false,
+        rejectionReason: ""
+      })
+      loadData()
+    } catch (error) {
+      console.error("Failed to add consumption:", error)
+    }
+  }
+
+  const handleEdit = (item: any) => {
+    setEditingItem({
+      ...item,
+      date: new Date(item.date).toISOString().split('T')[0],
+      amount: String(item.amount || 0),
+      isRejected: item.isRejected || false,
+      rejectionReason: item.rejectionReason || ""
+    })
+    setIsEditOpen(true)
+  }
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingItem) return
+    try {
+      await updateRecord('consumption', editingItem.id, {
+        ...editingItem,
+        amount: parseFloat(editingItem.amount) || 0
+      })
+      setIsEditOpen(false)
+      setEditingItem(null)
+      loadData()
+    } catch (error) {
+      console.error("Failed to update consumption:", error)
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure?")) return
+    try {
+      await deleteRecord('consumption', id)
+      loadData()
+    } catch (error) {
+      console.error("Failed to delete consumption:", error)
+    }
+  }
+
+  const getMaterialTotal = (material: string) => {
+    return consumptions
+      .filter(c => c.material.toLowerCase() === material.toLowerCase())
+      .reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl mb-2">Consumption Report</h1>
+          <p className="text-sm text-muted-foreground">Material and fuel consumption tracking</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" className="text-xs h-9" onClick={loadData}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <DialogTrigger asChild>
+              <Button className="text-xs h-9"><Plus className="h-4 w-4 mr-2" />Add Entry</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Consumption Entry</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleAdd} className="space-y-4 py-4 text-xs">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Material</Label>
+                    <Select value={newCons.material} onValueChange={v => setNewCons({...newCons, material: v})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Diesel">Diesel</SelectItem>
+                        <SelectItem value="Cement">Cement</SelectItem>
+                        <SelectItem value="Steel">Steel</SelectItem>
+                        <SelectItem value="Aggregates">Aggregates</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2"><Label>Amount</Label><Input type="number" value={newCons.amount} onChange={e => setNewCons({...newCons, amount: e.target.value})} required /></div>
+                  <div className="space-y-2"><Label>Unit</Label><Input value={newCons.unit} onChange={e => setNewCons({...newCons, unit: e.target.value})} required /></div>
+                  <div className="space-y-2"><Label>Date</Label><Input type="date" value={newCons.date} onChange={e => setNewCons({...newCons, date: e.target.value})} required /></div>
+                  <div className="space-y-2 col-span-2">
+                    <Label>Site</Label>
+                    <Select value={newCons.siteId} onValueChange={v => setNewCons({...newCons, siteId: v})}>
+                      <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
+                      <SelectContent>
+                        {sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 col-span-2 flex items-center gap-2 pt-2">
+                    <input
+                      id="cons-isRejected"
+                      type="checkbox"
+                      checked={newCons.isRejected}
+                      onChange={e => setNewCons({...newCons, isRejected: e.target.checked})}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <Label htmlFor="cons-isRejected" className="font-semibold text-red-600">Mark consumption as WASTED / REJECTED</Label>
+                  </div>
+                  {newCons.isRejected && (
+                    <div className="space-y-2 col-span-2">
+                      <Label htmlFor="cons-rejectionReason" className="text-red-500 font-medium">Rejection / Waste Reason *</Label>
+                      <Input id="cons-rejectionReason" placeholder="Spillage / Expired cement / Damaged steel" value={newCons.rejectionReason} onChange={e => setNewCons({...newCons, rejectionReason: e.target.value})} required />
+                    </div>
+                  )}
+                </div>
+                <DialogFooter><Button type="submit">Add Entry</Button></DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard title="Total Diesel" value={getMaterialTotal("Diesel").toLocaleString()} subtitle="liters" icon={Fuel} colorClass="bg-orange-100 dark:bg-orange-900/30" />
+        <KPICard title="Cement Used" value={getMaterialTotal("Cement").toLocaleString()} subtitle="bags" icon={Package} colorClass="bg-blue-100 dark:bg-blue-900/30" />
+        <KPICard title="Steel Used" value={getMaterialTotal("Steel").toLocaleString()} subtitle="tons" icon={Hammer} colorClass="bg-red-100 dark:bg-red-900/30" />
+        <KPICard title="Aggregates" value={getMaterialTotal("Aggregates").toLocaleString()} subtitle="tons" icon={Mountain} colorClass="bg-green-100 dark:bg-green-900/30" />
+      </div>
+
+      <Card>
+        <CardHeader><CardTitle>Consumption Records</CardTitle></CardHeader>
+        <CardContent>
+          <div className="rounded-md border overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Material</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Unit</TableHead>
+                  <TableHead>Site</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {consumptions.map((item) => (
+                  <TableRow key={item.id} className={item.isRejected ? "bg-red-50/50 dark:bg-red-950/10" : ""}>
+                    <TableCell className="text-xs">{new Date(item.date).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-xs font-medium">{item.material}</TableCell>
+                    <TableCell className="text-xs">{(item.amount || 0).toLocaleString()}</TableCell>
+                    <TableCell className="text-xs">{item.unit}</TableCell>
+                    <TableCell className="text-xs">{item.site?.name || 'N/A'}</TableCell>
+                    <TableCell>
+                      {item.isRejected ? (
+                        <Badge variant="destructive" className="text-[9px] h-5 uppercase font-bold" title={item.rejectionReason}>
+                          Wasted / Rejected
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[9px] h-5 bg-green-50 text-green-700 border-green-200">
+                          Consumed
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleEdit(item)}><Edit className="h-3.5 w-3.5" /></Button>
+                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(item.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Edit Modal */}
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Consumption</DialogTitle></DialogHeader>
+          {editingItem && (
+            <form onSubmit={handleUpdate} className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Material</Label>
+                  <Select value={editingItem.material} onValueChange={v => setEditingItem({...editingItem, material: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Diesel">Diesel</SelectItem>
+                      <SelectItem value="Cement">Cement</SelectItem>
+                      <SelectItem value="Steel">Steel</SelectItem>
+                      <SelectItem value="Aggregates">Aggregates</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2"><Label>Amount</Label><Input type="number" value={editingItem.amount} onChange={e => setEditingItem({...editingItem, amount: e.target.value})} required /></div>
+                <div className="space-y-2"><Label>Unit</Label><Input value={editingItem.unit} onChange={e => setEditingItem({...editingItem, unit: e.target.value})} required /></div>
+                <div className="space-y-2"><Label>Date</Label><Input type="date" value={editingItem.date} onChange={e => setEditingItem({...editingItem, date: e.target.value})} required /></div>
+                <div className="space-y-2 col-span-2">
+                  <Label>Site</Label>
+                  <Select value={editingItem.siteId} onValueChange={v => setEditingItem({...editingItem, siteId: v})}>
+                    <SelectTrigger><SelectValue placeholder="Select site" /></SelectTrigger>
+                    <SelectContent>
+                      {sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2 col-span-2 flex items-center gap-2 pt-2">
+                  <input
+                    id="edit-cons-isRejected"
+                    type="checkbox"
+                    checked={editingItem.isRejected}
+                    onChange={e => setEditingItem({...editingItem, isRejected: e.target.checked})}
+                    className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Label htmlFor="edit-cons-isRejected" className="font-semibold text-red-600">Mark consumption as WASTED / REJECTED</Label>
+                </div>
+                {editingItem.isRejected && (
+                  <div className="space-y-2 col-span-2">
+                    <Label htmlFor="edit-cons-rejectionReason" className="text-red-500 font-medium">Rejection / Waste Reason *</Label>
+                    <Input id="edit-cons-rejectionReason" value={editingItem.rejectionReason} onChange={e => setEditingItem({...editingItem, rejectionReason: e.target.value})} required />
+                  </div>
+                )}
+              </div>
+              <DialogFooter><Button type="submit">Update Entry</Button></DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
