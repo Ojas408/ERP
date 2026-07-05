@@ -6,7 +6,7 @@ Host on **Neon** (database) + **Render** (API) + **Vercel** (UI) using GitHub re
 
 | Step | Service | Action |
 |------|---------|--------|
-| 1 | [Neon](https://neon.tech) | New project → copy **pooled** `DATABASE_URL` |
+| 1 | [Neon](https://neon.tech) | New project → copy **Direct** connection (`DATABASE_URL`, pooling **OFF**) |
 | 2 | [Render](https://dashboard.render.com/blueprints) | **New Blueprint** → connect `Ojas408/ERP` → set `DATABASE_URL` → Deploy |
 | 3 | Render Shell | Run once: `npm run db:seed` |
 | 4 | [Vercel](https://vercel.com/new) | Import `Ojas408/ERP`, root `frontend`, env `VITE_API_URL` = Render URL |

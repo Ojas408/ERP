@@ -1,5 +1,5 @@
 # Render Blueprint — https://dashboard.render.com/blueprints
-# Neon: set DATABASE_URL = Pooled connection, DIRECT_URL = Direct connection
+# Neon: use Direct connection string (pooling OFF) for DATABASE_URL
 
 services:
   - type: web
@@ -8,8 +8,8 @@ services:
     plan: free
     region: oregon
     rootDir: backend
-    buildCommand: npm install --include=dev && npm run build
-    startCommand: sh render-start.sh
+    buildCommand: npm install --include=dev && npm run build && npm run db:push:retry
+    startCommand: npm start
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -21,6 +21,4 @@ services:
       - key: CORS_ORIGIN
         value: "*"
       - key: DATABASE_URL
-        sync: false
-      - key: DIRECT_URL
         sync: false
