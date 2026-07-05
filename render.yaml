@@ -1,5 +1,5 @@
-# Render Blueprint — import at https://dashboard.render.com/blueprints
-# After deploy: set DATABASE_URL (from Neon) in the Render dashboard, then redeploy.
+# Render Blueprint — https://dashboard.render.com/blueprints
+# Neon: set DATABASE_URL = Pooled connection, DIRECT_URL = Direct connection
 
 services:
   - type: web
@@ -8,8 +8,8 @@ services:
     plan: free
     region: oregon
     rootDir: backend
-    buildCommand: npm install --include=dev && npm run build && npx prisma db push
-    startCommand: npm start
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: sh render-start.sh
     healthCheckPath: /health
     envVars:
       - key: NODE_ENV
@@ -21,4 +21,6 @@ services:
       - key: CORS_ORIGIN
         value: "*"
       - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
         sync: false
