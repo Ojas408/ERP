@@ -1,5 +1,23 @@
 # Hosting Guide — Construction ERP
 
+## Free cloud (no laptop on 24/7)
+
+Host on **Neon** (database) + **Render** (API) + **Vercel** (UI) using GitHub repo `Ojas408/ERP`.
+
+| Step | Service | Action |
+|------|---------|--------|
+| 1 | [Neon](https://neon.tech) | New project → copy **pooled** `DATABASE_URL` |
+| 2 | [Render](https://dashboard.render.com/blueprints) | **New Blueprint** → connect `Ojas408/ERP` → set `DATABASE_URL` → Deploy |
+| 3 | Render Shell | Run once: `npm run db:seed` |
+| 4 | [Vercel](https://vercel.com/new) | Import `Ojas408/ERP`, root `frontend`, env `VITE_API_URL` = Render URL |
+| 5 | Render | Set `CORS_ORIGIN` to your Vercel URL, redeploy |
+
+Repo includes `render.yaml` and `frontend/vercel.json` for auto-config.
+
+---
+
+## Docker (local or VPS)
+
 Deploy the full stack (PostgreSQL + API + React UI) with Docker.
 
 ## Prerequisites

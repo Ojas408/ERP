@@ -1,0 +1,24 @@
+# Render Blueprint — import at https://dashboard.render.com/blueprints
+# After deploy: set DATABASE_URL (from Neon) in the Render dashboard, then redeploy.
+
+services:
+  - type: web
+    name: erp-api
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install --include=dev && npm run build && npx prisma db push
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "5000"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        value: "*"
+      - key: DATABASE_URL
+        sync: false
