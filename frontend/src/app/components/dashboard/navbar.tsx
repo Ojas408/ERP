@@ -15,12 +15,19 @@ import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
 import { useTheme } from "next-themes"
 import { useAuth } from "../../contexts/AuthContext"
 import { useDateRange, dateRangePresets, formatDateRange } from "../../contexts/DateRangeContext"
+import { useSiteFilter } from "../../contexts/SiteFilterContext"
 import { SidebarNav } from "./sidebar-nav"
 
-export function Navbar() {
+interface NavbarProps {
+  activeModule: string
+  onModuleChange: (moduleId: string) => void
+}
+
+export function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuth()
   const { dateRange, setDateRange } = useDateRange()
+  const { sites, selectedSiteId, selectedSiteName, setSelectedSiteId, lowStockCount } = useSiteFilter()
 
   const getInitials = (email: string) => {
     return email.substring(0, 2).toUpperCase()
@@ -37,7 +44,7 @@ export function Navbar() {
             </Button>
           </SheetTrigger>
           <SheetContent side="left" className="p-0 w-64">
-            <SidebarNav />
+            <SidebarNav activeModule={activeModule} onModuleChange={onModuleChange} mobile />
           </SheetContent>
         </Sheet>
         
@@ -99,23 +106,26 @@ export function Navbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Plant/Site Selector */}
+          {/* Site Selector */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="gap-2 hidden lg:flex">
                 <MapPin className="h-4 w-4" />
-                <span className="text-xs">Plant A - Mumbai</span>
+                <span className="text-xs max-w-[140px] truncate">{selectedSiteName}</span>
                 <ChevronDown className="h-3 w-3" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Select Plant/Site</DropdownMenuLabel>
+              <DropdownMenuLabel>Select Site</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Plant A - Mumbai</DropdownMenuItem>
-              <DropdownMenuItem>Plant B - Pune</DropdownMenuItem>
-              <DropdownMenuItem>Plant C - Bangalore</DropdownMenuItem>
-              <DropdownMenuItem>Site D - Delhi NCR</DropdownMenuItem>
-              <DropdownMenuItem>Crusher Unit - Nagpur</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setSelectedSiteId("all")}>
+                All Sites
+              </DropdownMenuItem>
+              {sites.map((site) => (
+                <DropdownMenuItem key={site.id} onClick={() => setSelectedSiteId(site.id)}>
+                  {site.name}{site.location ? ` — ${site.location}` : ""}
+                </DropdownMenuItem>
+              ))}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -137,34 +147,21 @@ export function Navbar() {
               <Button variant="ghost" size="icon" className="relative h-9 w-9">
                 <Bell className="h-4 w-4" />
                 <Badge className="absolute -right-1 -top-1 h-5 w-5 rounded-full p-0 flex items-center justify-center bg-orange-600 text-[10px]">
-                  5
+                  {lowStockCount > 0 ? lowStockCount : 0}
                 </Badge>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <DropdownMenuLabel>Alerts {lowStockCount > 0 ? `(${lowStockCount} low stock)` : ''}</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-                <div className="flex w-full items-center justify-between">
-                  <span className="text-xs font-medium">Vehicle VH-101 breakdown</span>
-                  <span className="text-xs text-muted-foreground">2m ago</span>
-                </div>
-                <span className="text-xs text-muted-foreground">Maintenance required at Plant A</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-                <div className="flex w-full items-center justify-between">
-                  <span className="text-xs font-medium">Production target achieved</span>
-                  <span className="text-xs text-muted-foreground">1h ago</span>
-                </div>
-                <span className="text-xs text-muted-foreground">Plant B reached 105% of daily target</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
-                <div className="flex w-full items-center justify-between">
-                  <span className="text-xs font-medium">Fuel consumption alert</span>
-                  <span className="text-xs text-muted-foreground">3h ago</span>
-                </div>
-                <span className="text-xs text-muted-foreground">Above normal consumption detected</span>
-              </DropdownMenuItem>
+              {lowStockCount > 0 ? (
+                <DropdownMenuItem className="flex flex-col items-start gap-1 py-3">
+                  <span className="text-xs font-medium text-orange-600">Low stock alert</span>
+                  <span className="text-xs text-muted-foreground">{lowStockCount} material(s) below minimum threshold — check Inventory</span>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem className="text-xs text-muted-foreground py-3">No active alerts</DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
 

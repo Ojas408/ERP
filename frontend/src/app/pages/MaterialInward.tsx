@@ -187,8 +187,8 @@ export default function MaterialInward() {
   // KPIs
   const totalReceipts = inwards.length
   const totalQuantityCement = inwards.filter(i => i.materialName === "Cement").reduce((sum, i) => sum + (i.quantity || 0), 0)
+  const totalQuantityAggregate = inwards.filter(i => i.materialName === "Aggregate").reduce((sum, i) => sum + (i.quantity || 0), 0)
   const totalQuantitySand = inwards.filter(i => i.materialName === "Sand").reduce((sum, i) => sum + (i.quantity || 0), 0)
-  const totalQuantitySteel = inwards.filter(i => i.materialName === "Steel").reduce((sum, i) => sum + (i.quantity || 0), 0)
 
   return (
     <div className="space-y-6">
@@ -299,8 +299,8 @@ export default function MaterialInward() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard title="Total Receipts" value={totalReceipts.toString()} subtitle="total inward logs" icon={Package} colorClass="bg-slate-50 text-slate-500" />
         <KPICard title="Cement Inward" value={totalQuantityCement.toLocaleString()} subtitle="bags received" icon={ArrowDownLeft} colorClass="bg-blue-50 text-blue-600" />
+        <KPICard title="Aggregate Inward" value={totalQuantityAggregate.toLocaleString()} subtitle="tons received" icon={ArrowDownLeft} colorClass="bg-stone-50 text-stone-600" />
         <KPICard title="Sand Inward" value={totalQuantitySand.toLocaleString()} subtitle="tons received" icon={ArrowDownLeft} colorClass="bg-amber-50 text-amber-600" />
-        <KPICard title="Steel Inward" value={totalQuantitySteel.toLocaleString()} subtitle="kg received" icon={ArrowDownLeft} colorClass="bg-emerald-50 text-emerald-600" />
       </div>
 
       {/* Filters */}

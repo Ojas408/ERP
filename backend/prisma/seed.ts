@@ -18,6 +18,10 @@ async function main() {
   await prisma.employee.deleteMany({});
   await prisma.vehicle.deleteMany({});
   await prisma.vendor.deleteMany({});
+  await prisma.overheadEntry.deleteMany({});
+  await prisma.scrap.deleteMany({});
+  await prisma.rMCGrade.deleteMany({});
+  await prisma.materialInward.deleteMany({});
   await prisma.site.deleteMany({});
   
   // Clean new lookup and document models
@@ -39,14 +43,12 @@ async function main() {
   const tenantA = await prisma.tenant.create({
     data: {
       name: 'Default Company',
-      subscriptionPlan: 'pro'
     }
   });
 
   const tenantB = await prisma.tenant.create({
     data: {
       name: 'Apex Builders Ltd',
-      subscriptionPlan: 'pro'
     }
   });
 
@@ -260,9 +262,10 @@ async function main() {
   console.log('Seeding Production...');
   await prisma.production.createMany({
     data: [
-      { amount: 350, siteId: site1.id, notes: 'Excavation completed on segment 1', tenantId: tenantA.id },
-      { amount: 450, siteId: site2.id, notes: 'Foundation columns casted', tenantId: tenantA.id },
-      { amount: 120, siteId: site1.id, notes: 'Utility pipe layout checked', tenantId: tenantA.id },
+      { amount: 85, unit: 'cum', grade: 'M25', productionType: 'Transit Mixture', siteId: site1.id, towerName: 'Tower A - Foundation', notes: 'Transit mixer batch for foundation pour', date: new Date('2026-05-28T09:30:00'), tenantId: tenantA.id },
+      { amount: 120, unit: 'sqm', grade: 'M20', productionType: 'Slabs', siteId: site2.id, towerName: 'Skyline Block B - Slab 3', notes: 'Ground floor slab casting completed', date: new Date('2026-05-29T14:00:00'), tenantId: tenantA.id },
+      { amount: 65, unit: 'cum', grade: 'M30', productionType: 'Column', siteId: site1.id, towerName: 'Metro Line - Column C4', notes: 'Column casting segment 1', date: new Date('2026-05-30T08:00:00'), tenantId: tenantA.id },
+      { amount: 45, unit: 'cum', grade: 'M25', productionType: 'Transit Mixture', siteId: site2.id, towerName: 'Skyline Residency - Podium', notes: 'Podium level RMC supply', date: new Date('2026-05-30T11:30:00'), tenantId: tenantA.id },
     ]
   });
 
@@ -294,9 +297,80 @@ async function main() {
     ]
   });
 
+  // 16. Seed Material Inward
+  console.log('Seeding Material Inward...');
+  await prisma.materialInward.createMany({
+    data: [
+      { inwardNumber: 'INW-2026-001', materialName: 'Cement', quantity: 500, unit: 'bags', supplierName: 'Supreme Cement Group', siteId: site1.id, receivedBy: 'David Miller', remarks: 'OPC 53 Grade cement bags', date: new Date('2026-05-27T10:00:00'), tenantId: tenantA.id },
+      { inwardNumber: 'INW-2026-002', materialName: 'Aggregate', quantity: 120, unit: 'tons', supplierName: 'Pacific Aggregates Ltd', siteId: site1.id, receivedBy: 'Karan Sharma', remarks: '20mm crushed stone aggregate', date: new Date('2026-05-28T08:30:00'), tenantId: tenantA.id },
+      { inwardNumber: 'INW-2026-003', materialName: 'Cement', quantity: 300, unit: 'bags', supplierName: 'Supreme Cement Group', siteId: site2.id, receivedBy: 'Sanjay Yadav', remarks: 'PPC cement for slab work', date: new Date('2026-05-29T09:15:00'), tenantId: tenantA.id },
+      { inwardNumber: 'INW-2026-004', materialName: 'Aggregate', quantity: 85, unit: 'tons', supplierName: 'Pacific Aggregates Ltd', siteId: site2.id, receivedBy: 'Robert Chen', remarks: '10mm fine aggregate for RMC', date: new Date('2026-05-30T07:45:00'), tenantId: tenantA.id },
+      { inwardNumber: 'INW-2026-005', materialName: 'Sand', quantity: 60, unit: 'tons', supplierName: 'River Sand Suppliers', siteId: site1.id, receivedBy: 'David Miller', tenantId: tenantA.id },
+      { inwardNumber: 'INW-2026-006', materialName: 'Steel', quantity: 2500, unit: 'kg', supplierName: 'Apex Steel Industries', siteId: site2.id, receivedBy: 'Karan Sharma', tenantId: tenantA.id },
+    ]
+  });
+
+  // 17. Seed RMC Grades
+  console.log('Seeding RMC Grades...');
+  await prisma.rMCGrade.createMany({
+    data: [
+      { grade: 'M20', mixRatio: '1:1.5:3', cementContent: 300, waterCementRatio: 0.55, admixture: 'Superplasticizer', description: 'Standard foundation mix', tenantId: tenantA.id },
+      { grade: 'M25', mixRatio: '1:1:2', cementContent: 350, waterCementRatio: 0.50, admixture: 'Superplasticizer', description: 'Column and beam mix', tenantId: tenantA.id },
+      { grade: 'M30', mixRatio: '1:0.75:1.5', cementContent: 380, waterCementRatio: 0.45, admixture: 'PCE based', description: 'High-rise structural mix', tenantId: tenantA.id },
+    ]
+  });
+
+  // 18. Seed Scrap
+  console.log('Seeding Scrap...');
+  await prisma.scrap.createMany({
+    data: [
+      { materialType: 'Steel', quantity: 2.5, unit: 'tons', siteId: site1.id, saleStatus: 'stored', remarks: 'Cut-off rebar pieces', tenantId: tenantA.id },
+      { materialType: 'Concrete', quantity: 8, unit: 'tons', siteId: site2.id, saleStatus: 'sold', saleValue: 12000, buyerName: 'EcoRecycle Ltd', tenantId: tenantA.id },
+    ]
+  });
+
+  // 19. Seed Total Overhead Report entries
+  console.log('Seeding Overhead Entries...');
+  await prisma.overheadEntry.createMany({
+    data: [
+      { category: 'Transit Mixture', description: 'RMC supply - May batch 1', quantity: 150, unit: 'cum', amount: 675000, siteId: site1.id, date: new Date('2026-05-28'), tenantId: tenantA.id },
+      { category: 'Transit Mixture', description: 'RMC supply - May batch 2', quantity: 110, unit: 'cum', amount: 495000, siteId: site2.id, date: new Date('2026-05-30'), tenantId: tenantA.id },
+      { category: 'Slabs', description: 'Ground floor slab - Block B', quantity: 120, unit: 'sqm', amount: 360000, siteId: site2.id, date: new Date('2026-05-29'), tenantId: tenantA.id },
+      { category: 'Slabs', description: 'Podium slab - Tower A', quantity: 85, unit: 'sqm', amount: 255000, siteId: site1.id, date: new Date('2026-05-27'), tenantId: tenantA.id },
+      { category: 'Cement', description: 'Cement procurement overhead', quantity: 800, unit: 'bags', amount: 336000, siteId: site1.id, tenantId: tenantA.id },
+      { category: 'Aggregate', description: 'Aggregate & sand handling', quantity: 205, unit: 'tons', amount: 287000, siteId: site1.id, tenantId: tenantA.id },
+      { category: 'Labour', description: 'Site labour wages - May', amount: 420000, siteId: site2.id, tenantId: tenantA.id },
+      { category: 'Fuel', description: 'Transit mixer diesel & equipment fuel', amount: 98000, siteId: site1.id, tenantId: tenantA.id },
+      { category: 'Maintenance', description: 'Mixer truck & pump maintenance', amount: 45000, siteId: site2.id, tenantId: tenantA.id },
+      { category: 'Equipment Hire', description: 'Crane & vibrator hire charges', amount: 125000, siteId: site1.id, tenantId: tenantA.id },
+    ]
+  });
+
+  // 20. Seed role-based test users (password: admin123)
+  console.log('Seeding role test users...');
+  const roleUsers = [
+    { email: 'hr@example.com', name: 'HR Manager', role: 'HR' },
+    { email: 'accounts@example.com', name: 'Accounts Lead', role: 'Accounts' },
+    { email: 'purchase@example.com', name: 'Purchase Officer', role: 'Purchase' },
+    { email: 'site@example.com', name: 'Site Engineer', role: 'Site Engineer' },
+    { email: 'manager@example.com', name: 'Operations Manager', role: 'Manager' },
+    { email: 'viewer@example.com', name: 'Report Viewer', role: 'Viewer' },
+  ];
+  for (const u of roleUsers) {
+    await prisma.user.create({
+      data: {
+        email: u.email,
+        name: u.name,
+        password: hashedPassword,
+        role: u.role,
+        tenantId: tenantA.id,
+      },
+    });
+  }
+
   console.log('Database seeded successfully!');
-  console.log('Admin A: admin@example.com (Company: Default Company)');
-  console.log('Admin B: apex@example.com (Company: Apex Builders Ltd)');
+  console.log('Admin: admin@example.com / admin123');
+  console.log('Role test users (same password): hr@, accounts@, purchase@, site@, manager@, viewer@example.com');
 }
 
 main()

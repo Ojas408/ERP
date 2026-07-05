@@ -43,6 +43,7 @@ model Tenant {
   materialInwards    MaterialInward[]
   rmcGrades          RMCGrade[]
   scraps             Scrap[]
+  overheadEntries    OverheadEntry[]
 }
 
 
@@ -63,11 +64,13 @@ model Production {
   date            DateTime @default(now())
   amount          Float
   unit            String   @default("tons")
+  grade           String?  // RMC grade: M20, M25, M30 etc.
+  productionType  String?  // Slab, Column, Transit Mixture, Foundation, etc.
   siteId          String?
   site            Site?    @relation(fields: [siteId], references: [id])
   notes           String?
   quality         String?
-  towerName       String?
+  towerName       String?  // Building / tower / slab reference
   isRejected      Boolean  @default(false)
   rejectionReason String?
   tenantId        String
@@ -115,6 +118,7 @@ model Site {
   vehicles        Vehicle[]
   materialInwards MaterialInward[]
   scraps          Scrap[]
+  overheadEntries OverheadEntry[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
@@ -393,5 +397,21 @@ model Scrap {
   tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+model OverheadEntry {
+  id          String   @id @default(uuid())
+  date        DateTime @default(now())
+  category    String   // Transit Mixture, Slabs, Cement, Aggregate, Labour, Fuel, Maintenance, Other
+  description String?
+  quantity    Float?
+  unit        String?  // cum, sqm, bags, tons, trips
+  amount      Float
+  siteId      String?
+  site        Site?    @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  tenantId    String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 

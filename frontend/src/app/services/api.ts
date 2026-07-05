@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://localhost:5000/api';
+import { API_ROOT } from '../lib/config';
+
+const API_BASE_URL = `${API_ROOT}/api`;
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem('erp_token');
@@ -98,14 +100,9 @@ export const createMaterialInward = (data: any) => createRecord('material-inward
 export const createRmcGrade = (data: any) => createRecord('rmc-grades', data);
 export const createScrap = (data: any) => createRecord('scrap', data);
 
-export const createCheckoutSession = async (planName: string) => {
-  const response = await fetch(`${API_BASE_URL}/billing/create-checkout-session`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-    body: JSON.stringify({ planName }),
-  });
-  return handleResponse(response);
-};
+export const fetchOverheadEntries = () => fetchRecords('overhead');
+export const fetchOverheadSummary = () => fetchRecords('overhead/summary');
+export const createOverheadEntry = (data: any) => createRecord('overhead', data);
 
 // Document Attachment Upload Helpers
 export const uploadFile = async (file: File, entityFields: { employeeId?: string; vehicleId?: string; challanId?: string }) => {

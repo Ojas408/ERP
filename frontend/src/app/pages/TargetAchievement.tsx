@@ -1,46 +1,46 @@
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { KPICard } from "../components/dashboard/kpi-card"
-import { BarChart, Bar, LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
+import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
-import { Target, TrendingUp, Award, CheckCircle, Upload, Download, Eye, Edit, Trash2 } from "lucide-react"
+import { Target, TrendingUp, Award, CheckCircle, RefreshCw } from "lucide-react"
+import { fetchTargetsReport } from "../services/api"
 
-const monthlyTargets = [
-  { id: "mt1", month: "January", target: 12000, achieved: 11500, percentage: 95.8 },
-  { id: "mt2", month: "February", target: 12000, achieved: 12800, percentage: 106.7 },
-  { id: "mt3", month: "March", target: 13000, achieved: 13500, percentage: 103.8 },
-  { id: "mt4", month: "April", target: 13000, achieved: 12200, percentage: 93.8 },
-  { id: "mt5", month: "May", target: 14000, achieved: 13800, percentage: 98.6 },
-]
-
-const departmentTargets = [
-  { id: "dt1", department: "Production", target: 14000, achieved: 13800, percentage: 98.6, status: "on-track" },
-  { id: "dt2", department: "Sales", target: 50, achieved: 52, percentage: 104, status: "exceeded" },
-  { id: "dt3", department: "Quality Control", target: 95, achieved: 97, percentage: 102.1, status: "exceeded" },
-  { id: "dt4", department: "Logistics", target: 500, achieved: 485, percentage: 97, status: "on-track" },
-  { id: "dt5", department: "Maintenance", target: 90, achieved: 92, percentage: 102.2, status: "exceeded" },
-]
-
-const weeklyProgress = [
-  { id: "wp1", week: "Week 1", target: 3500, achieved: 3420, daily: 488 },
-  { id: "wp2", week: "Week 2", target: 3500, achieved: 3680, daily: 526 },
-  { id: "wp3", week: "Week 3", target: 3500, achieved: 3560, daily: 509 },
-  { id: "wp4", week: "Week 4", target: 3500, achieved: 3140, daily: 449 },
-]
-
-const performanceMetrics = [
-  { id: "pm1", metric: "Production Volume", target: "14,000 tons", current: "13,800 tons", achievement: 98.6 },
-  { id: "pm2", metric: "Quality Rate", target: "95%", current: "97%", achievement: 102.1 },
-  { id: "pm3", metric: "On-time Delivery", target: "90%", current: "94%", achievement: 104.4 },
-  { id: "pm4", metric: "Customer Satisfaction", target: "85%", current: "92%", achievement: 108.2 },
-  { id: "pm5", metric: "Safety Score", target: "95%", current: "98%", achievement: 103.2 },
+const fallbackMonthly = [
+  { id: "none", month: "No data", target: 0, achieved: 0, percentage: 0 },
 ]
 
 export default function TargetAchievement() {
+  const [report, setReport] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  const loadReport = async () => {
+    try {
+      setLoading(true)
+      const data = await fetchTargetsReport()
+      setReport(data)
+    } catch (error) {
+      console.error("Failed to load target report:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadReport()
+  }, [])
+
+  const monthlyTargets = report?.monthlyTargets?.length ? report.monthlyTargets : fallbackMonthly
+  const departmentTargets = report?.departmentTargets || []
+  const weeklyProgress = report?.weeklyProgress || []
+  const performanceMetrics = report?.performanceMetrics || []
+
   const currentMonth = monthlyTargets[monthlyTargets.length - 1]
-  const exceededCount = departmentTargets.filter(d => d.status === "exceeded").length
+  const exceededCount = departmentTargets.filter((d: any) => d.status === "exceeded").length
+  const onTrackCount = departmentTargets.filter((d: any) => d.status === "on-track").length
 
   return (
     <div className="space-y-6">
@@ -51,52 +51,43 @@ export default function TargetAchievement() {
             Track and analyze performance against targets
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="text-xs h-9">
-            <Upload className="h-4 w-4 mr-2" />
-            Import CSV
-          </Button>
-          <Button variant="outline" className="text-xs h-9">
-            <Download className="h-4 w-4 mr-2" />
-            Export Report
-          </Button>
-        </div>
+        <Button variant="outline" className="text-xs h-9" onClick={loadReport} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard
           title="Monthly Target"
-          value="14,000"
+          value={currentMonth?.target?.toLocaleString() || "0"}
           subtitle="tons target"
           icon={Target}
           colorClass="bg-blue-100 dark:bg-blue-900/30"
         />
         <KPICard
           title="Achievement"
-          value="98.6%"
-          subtitle="13,800 tons"
+          value={`${currentMonth?.percentage?.toFixed?.(1) || currentMonth?.percentage || 0}%`}
+          subtitle={`${currentMonth?.achieved?.toLocaleString() || 0} tons`}
           icon={TrendingUp}
           colorClass="bg-green-100 dark:bg-green-900/30"
-          trend={{ value: 5.0, isPositive: true }}
         />
         <KPICard
           title="Targets Exceeded"
           value={exceededCount.toString()}
-          subtitle="of 5 departments"
+          subtitle={`of ${departmentTargets.length} departments`}
           icon={Award}
           colorClass="bg-purple-100 dark:bg-purple-900/30"
         />
         <KPICard
           title="On-Track Depts"
-          value={(departmentTargets.length - exceededCount).toString()}
+          value={onTrackCount.toString()}
           subtitle="departments"
           icon={CheckCircle}
           colorClass="bg-orange-100 dark:bg-orange-900/30"
         />
       </div>
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -131,7 +122,7 @@ export default function TargetAchievement() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={weeklyProgress}>
+              <LineChart data={weeklyProgress.length ? weeklyProgress : [{ week: "N/A", target: 0, achieved: 0 }]}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="week" className="text-xs" />
                 <YAxis className="text-xs" />
@@ -151,7 +142,6 @@ export default function TargetAchievement() {
         </Card>
       </div>
 
-      {/* Department Targets */}
       <Card>
         <CardHeader>
           <CardTitle>Department-wise Target Achievement</CardTitle>
@@ -168,11 +158,10 @@ export default function TargetAchievement() {
                   <TableHead>Achievement %</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Progress</TableHead>
-                  <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {departmentTargets.map((dept) => (
+                {departmentTargets.map((dept: any) => (
                   <TableRow key={dept.id}>
                     <TableCell className="text-xs">{dept.department}</TableCell>
                     <TableCell className="text-xs">{dept.target.toLocaleString()}</TableCell>
@@ -180,10 +169,10 @@ export default function TargetAchievement() {
                     <TableCell className="text-xs">{dept.percentage}%</TableCell>
                     <TableCell>
                       <Badge
-                        variant={dept.status === "exceeded" ? "default" : "secondary"}
+                        variant={dept.status === "exceeded" ? "default" : dept.status === "at-risk" ? "destructive" : "secondary"}
                         className="text-xs"
                       >
-                        {dept.status === "exceeded" ? "Exceeded" : "On Track"}
+                        {dept.status === "exceeded" ? "Exceeded" : dept.status === "at-risk" ? "At Risk" : "On Track"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -194,19 +183,6 @@ export default function TargetAchievement() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                          <Eye className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                          <Edit className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -215,7 +191,6 @@ export default function TargetAchievement() {
         </CardContent>
       </Card>
 
-      {/* Performance Metrics */}
       <Card>
         <CardHeader>
           <CardTitle>Key Performance Metrics</CardTitle>
@@ -223,7 +198,7 @@ export default function TargetAchievement() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {performanceMetrics.map((metric) => (
+            {performanceMetrics.map((metric: any) => (
               <div key={metric.id} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">

@@ -3,10 +3,10 @@ const rolePermissions = {
     'Super Admin': ['all'],
     'Admin': ['almost_everything'], // We can refine this later
     'HR': ['employees', 'payroll', 'attendance'],
-    'Accounts': ['expenses', 'reports/accounts', 'reports/business', 'vendors', 'purchase-orders', 'challans', 'material-inward', 'scrap', 'overhead-report'],
+    'Accounts': ['expenses', 'reports/accounts', 'reports/business', 'vendors', 'purchase-orders', 'challans', 'material-inward', 'scrap', 'overhead-report', 'overhead'],
     'Purchase': ['vendors', 'purchase-orders', 'inventory', 'challans', 'material-inward', 'scrap', 'rmc-grades'],
     'Site Engineer': ['production', 'consumption', 'sites', 'inventory', 'challans', 'material-inward', 'scrap', 'rmc-grades'],
-    'Manager': ['reports/accounts', 'reports/business', 'reports/efficiency', 'reports/targets', 'reports/time-motion', 'reports/maintenance-overview', 'stats', 'dashboard', 'overhead-report'],
+    'Manager': ['reports/accounts', 'reports/business', 'reports/efficiency', 'reports/targets', 'reports/time-motion', 'reports/maintenance-overview', 'stats', 'dashboard', 'overhead-report', 'overhead'],
     'Viewer': ['read_only'] // Special handling for Viewer
 };
 export const authorize = (allowedModules) => {

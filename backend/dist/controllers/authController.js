@@ -55,7 +55,6 @@ export const register = async (req, res) => {
                 tenant: {
                     create: {
                         name: tenantName,
-                        subscriptionPlan: 'free'
                     }
                 }
             },

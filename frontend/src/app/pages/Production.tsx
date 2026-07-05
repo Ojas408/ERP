@@ -7,7 +7,7 @@ import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
 import { Factory, TrendingUp, Target, Activity, Upload, Download, Plus, Edit, Trash2, Eye, RefreshCw } from "lucide-react"
-import { fetchProductions, createProduction, fetchSites, deleteRecord, updateRecord } from "../services/api"
+import { fetchProductions, createProduction, fetchSites, fetchRmcGrades, deleteRecord, updateRecord } from "../services/api"
 import {
   Dialog,
   DialogContent,
@@ -24,6 +24,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 export default function Production() {
   const [productions, setProductions] = useState<any[]>([])
   const [sites, setSites] = useState<any[]>([])
+  const [rmcGrades, setRmcGrades] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -32,7 +33,9 @@ export default function Production() {
     siteId: "",
     date: new Date().toISOString().slice(0, 16),
     amount: "",
-    unit: "tons",
+    unit: "cum",
+    grade: "",
+    productionType: "Transit Mixture",
     notes: "",
     quality: "",
     towerName: "",
@@ -47,12 +50,14 @@ export default function Production() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [prodData, siteData] = await Promise.all([
+      const [prodData, siteData, gradeData] = await Promise.all([
         fetchProductions(),
-        fetchSites()
+        fetchSites(),
+        fetchRmcGrades()
       ])
       setProductions(Array.isArray(prodData) ? prodData : [])
       setSites(Array.isArray(siteData) ? siteData : [])
+      setRmcGrades(Array.isArray(gradeData) ? gradeData : [])
     } catch (error) {
       console.error("Failed to load production data:", error)
     } finally {
@@ -66,6 +71,7 @@ export default function Production() {
       await createProduction({
         ...newProd,
         amount: parseFloat(newProd.amount) || 0,
+        quality: newProd.grade || newProd.quality,
         date: new Date(newProd.date).toISOString()
       })
       setIsAddOpen(false)
@@ -73,7 +79,9 @@ export default function Production() {
         siteId: "",
         date: new Date().toISOString().slice(0, 16),
         amount: "",
-        unit: "tons",
+        unit: "cum",
+        grade: "",
+        productionType: "Transit Mixture",
         notes: "",
         quality: "",
         towerName: "",
@@ -91,6 +99,8 @@ export default function Production() {
       ...item,
       date: item.date ? new Date(item.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
       amount: String(item.amount || 0),
+      grade: item.grade || item.quality || "",
+      productionType: item.productionType || "",
       quality: item.quality || "",
       towerName: item.towerName || "",
       isRejected: item.isRejected || false,
@@ -109,7 +119,9 @@ export default function Production() {
         amount: parseFloat(editingItem.amount) || 0,
         unit: editingItem.unit,
         notes: editingItem.notes,
-        quality: editingItem.quality,
+        quality: editingItem.grade || editingItem.quality,
+        grade: editingItem.grade,
+        productionType: editingItem.productionType,
         towerName: editingItem.towerName,
         isRejected: editingItem.isRejected,
         rejectionReason: editingItem.rejectionReason
@@ -214,6 +226,20 @@ export default function Production() {
                     <Input id="date" type="datetime-local" value={newProd.date} onChange={e => setNewProd({...newProd, date: e.target.value})} required />
                   </div>
                   <div className="space-y-2">
+                    <Label htmlFor="prodType">Production Type</Label>
+                    <Select value={newProd.productionType} onValueChange={v => setNewProd({...newProd, productionType: v})}>
+                      <SelectTrigger id="prodType"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Transit Mixture">Transit Mixture</SelectItem>
+                        <SelectItem value="Slabs">Slabs</SelectItem>
+                        <SelectItem value="Column">Column</SelectItem>
+                        <SelectItem value="Foundation">Foundation</SelectItem>
+                        <SelectItem value="Beam">Beam</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label htmlFor="amount">Quantity ({newProd.unit}) *</Label>
                     <Input id="amount" type="number" placeholder="0.00" value={newProd.amount} onChange={e => setNewProd({...newProd, amount: e.target.value})} required />
                   </div>
@@ -224,6 +250,8 @@ export default function Production() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="cum">Cu.M (cum)</SelectItem>
+                        <SelectItem value="sqm">Sq.M (slabs)</SelectItem>
                         <SelectItem value="tons">Tons</SelectItem>
                         <SelectItem value="kg">kg</SelectItem>
                         <SelectItem value="units">Units</SelectItem>
@@ -231,12 +259,23 @@ export default function Production() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="quality">Material Quality / Grade</Label>
-                    <Input id="quality" placeholder="M25 Concrete / FE500" value={newProd.quality} onChange={e => setNewProd({...newProd, quality: e.target.value})} />
+                    <Label htmlFor="grade">RMC Grade *</Label>
+                    <Select value={newProd.grade} onValueChange={v => setNewProd({...newProd, grade: v})}>
+                      <SelectTrigger id="grade"><SelectValue placeholder="Select grade" /></SelectTrigger>
+                      <SelectContent>
+                        {rmcGrades.map(g => (
+                          <SelectItem key={g.id} value={g.grade}>{g.grade} {g.description ? `- ${g.description}` : ''}</SelectItem>
+                        ))}
+                        <SelectItem value="M20">M20</SelectItem>
+                        <SelectItem value="M25">M25</SelectItem>
+                        <SelectItem value="M30">M30</SelectItem>
+                        <SelectItem value="M35">M35</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="tower">Tower / Building Name</Label>
-                    <Input id="tower" placeholder="Tower B, Slab 3" value={newProd.towerName} onChange={e => setNewProd({...newProd, towerName: e.target.value})} />
+                    <Label htmlFor="tower">Site / Building Name</Label>
+                    <Input id="tower" placeholder="Tower B, Slab 3, Block A" value={newProd.towerName} onChange={e => setNewProd({...newProd, towerName: e.target.value})} />
                   </div>
                   <div className="space-y-2 col-span-2 flex items-center gap-2 pt-2">
                     <input
@@ -419,10 +458,11 @@ export default function Production() {
                 <TableRow>
                   <TableHead>Date & Time</TableHead>
                   <TableHead>Site</TableHead>
-                  <TableHead>Amount</TableHead>
+                  <TableHead>Building</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Quantity</TableHead>
                   <TableHead>Unit</TableHead>
-                  <TableHead>Quality / Grade</TableHead>
-                  <TableHead>Tower / Building</TableHead>
+                  <TableHead>Grade</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -432,10 +472,13 @@ export default function Production() {
                   <TableRow key={item.id} className={item.isRejected ? "bg-red-50/50 dark:bg-red-950/10" : ""}>
                     <TableCell className="text-xs">{new Date(item.date).toLocaleString()}</TableCell>
                     <TableCell className="text-xs font-medium">{item.site?.name || 'N/A'}</TableCell>
+                    <TableCell className="text-xs">{item.towerName || "-"}</TableCell>
+                    <TableCell className="text-xs">
+                      <Badge variant="outline" className="text-[9px]">{item.productionType || "General"}</Badge>
+                    </TableCell>
                     <TableCell className="text-xs font-semibold">{(item.amount || 0).toLocaleString()}</TableCell>
                     <TableCell className="text-xs font-mono">{item.unit}</TableCell>
-                    <TableCell className="text-xs font-medium">{item.quality || "-"}</TableCell>
-                    <TableCell className="text-xs">{item.towerName || "-"}</TableCell>
+                    <TableCell className="text-xs font-medium">{item.grade || item.quality || "-"}</TableCell>
                     <TableCell>
                       {item.isRejected ? (
                         <Badge variant="destructive" className="text-[9px] h-5 uppercase font-bold" title={item.rejectionReason}>
@@ -497,12 +540,28 @@ export default function Production() {
                   <Input id="edit-amount" type="number" value={editingItem.amount} onChange={e => setEditingItem({...editingItem, amount: e.target.value})} required />
                 </div>
                 <div className="space-y-2">
+                  <Label htmlFor="edit-prodType">Production Type</Label>
+                  <Select value={editingItem.productionType || "Transit Mixture"} onValueChange={v => setEditingItem({...editingItem, productionType: v})}>
+                    <SelectTrigger id="edit-prodType"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Transit Mixture">Transit Mixture</SelectItem>
+                      <SelectItem value="Slabs">Slabs</SelectItem>
+                      <SelectItem value="Column">Column</SelectItem>
+                      <SelectItem value="Foundation">Foundation</SelectItem>
+                      <SelectItem value="Beam">Beam</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="edit-unit">Unit</Label>
                   <Select value={editingItem.unit} onValueChange={v => setEditingItem({...editingItem, unit: v})}>
                     <SelectTrigger id="edit-unit">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="cum">Cu.M (cum)</SelectItem>
+                      <SelectItem value="sqm">Sq.M (slabs)</SelectItem>
                       <SelectItem value="tons">Tons</SelectItem>
                       <SelectItem value="kg">kg</SelectItem>
                       <SelectItem value="units">Units</SelectItem>
@@ -510,11 +569,21 @@ export default function Production() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-quality">Material Quality / Grade</Label>
-                  <Input id="edit-quality" value={editingItem.quality} onChange={e => setEditingItem({...editingItem, quality: e.target.value})} />
+                  <Label htmlFor="edit-grade">RMC Grade</Label>
+                  <Select value={editingItem.grade || ""} onValueChange={v => setEditingItem({...editingItem, grade: v})}>
+                    <SelectTrigger id="edit-grade"><SelectValue placeholder="Select grade" /></SelectTrigger>
+                    <SelectContent>
+                      {rmcGrades.map(g => (
+                        <SelectItem key={g.id} value={g.grade}>{g.grade}</SelectItem>
+                      ))}
+                      <SelectItem value="M20">M20</SelectItem>
+                      <SelectItem value="M25">M25</SelectItem>
+                      <SelectItem value="M30">M30</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-tower">Tower / Building Name</Label>
+                  <Label htmlFor="edit-tower">Site / Building Name</Label>
                   <Input id="edit-tower" value={editingItem.towerName} onChange={e => setEditingItem({...editingItem, towerName: e.target.value})} />
                 </div>
                 <div className="space-y-2 col-span-2 flex items-center gap-2 pt-2">

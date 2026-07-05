@@ -73,7 +73,6 @@ export const register = async (req: Request, res: Response) => {
         tenant: {
           create: {
             name: tenantName,
-            subscriptionPlan: 'free'
           }
         }
       },

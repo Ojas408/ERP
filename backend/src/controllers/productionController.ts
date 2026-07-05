@@ -32,6 +32,8 @@ export const createProduction = async (req: AuthRequest, res: Response) => {
             siteId: item.siteId || undefined,
             notes: item.notes || null,
             quality: item.quality || null,
+            grade: item.grade || item.quality || null,
+            productionType: item.productionType || null,
             towerName: item.towerName || null,
             isRejected: item.isRejected === true || item.isRejected === 'true',
             rejectionReason: item.rejectionReason || null,
@@ -50,6 +52,8 @@ export const createProduction = async (req: AuthRequest, res: Response) => {
           siteId: data.siteId,
           notes: data.notes,
           quality: data.quality || null,
+          grade: data.grade || data.quality || null,
+          productionType: data.productionType || null,
           towerName: data.towerName || null,
           isRejected: data.isRejected === true || data.isRejected === 'true',
           rejectionReason: data.rejectionReason || null,
@@ -83,7 +87,7 @@ export const updateProduction = async (req: AuthRequest, res: Response) => {
     const id = req.params.id as string;
     const tenantId = req.user!.tenantId;
     const { userId, email } = req.user!;
-    const { amount, unit, siteId, notes, date, quality, towerName, isRejected, rejectionReason } = req.body;
+    const { amount, unit, siteId, notes, date, quality, grade, productionType, towerName, isRejected, rejectionReason } = req.body;
     await prisma.production.updateMany({
       where: { id, tenantId },
       data: {
@@ -92,6 +96,8 @@ export const updateProduction = async (req: AuthRequest, res: Response) => {
         siteId,
         notes,
         quality,
+        grade,
+        productionType,
         towerName,
         isRejected: isRejected !== undefined ? (isRejected === true || isRejected === 'true') : undefined,
         rejectionReason,

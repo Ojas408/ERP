@@ -1,46 +1,31 @@
 # Construction ERP Backend
 
-This is the backend for the Enterprise Construction ERP Dashboard.
+Node.js + Express + Prisma + PostgreSQL API for the Enterprise Construction ERP Dashboard.
 
-## Tech Stack
-- **Node.js** with **TypeScript**
-- **Express.js** (Server)
-- **Prisma** (ORM)
-- **SQLite** (Database)
+## Setup
 
-## Getting Started
-
-### 1. Install Dependencies
 ```bash
 cd backend
 npm install
-```
-
-### 2. Set Up Database
-```bash
+cp .env.example .env   # if present, or create .env
 npx prisma db push
 npx tsx prisma/seed.ts
-```
-
-### 3. Run the Server
-```bash
 npm run dev
 ```
-The server will start on `http://localhost:5000`.
 
-## API Endpoints
+Server: **http://localhost:5000**
 
-### Auth
-- `POST /auth/login` - Login with email and password
-- `POST /auth/register` - Register a new user
+## Default login
 
-### ERP Data
-- `GET /api/stats` - Get overall dashboard statistics
-- `GET /api/production` - List production entries
-- `POST /api/production` - Create new production entry
-- `GET /api/inventory` - List inventory items
-- `GET /api/expenses` - List expenses
+- **Email:** `admin@example.com`
+- **Password:** `admin123`
 
-## Default Credentials
-- **Email**: `admin@example.com`
-- **Password**: `admin123`
+See root `README.md` for all test users and Docker instructions.
+
+## API overview
+
+- `POST /auth/login` — Login
+- `POST /auth/register` — Register + create workspace
+- `GET /api/*` — ERP modules (JWT required)
+
+Subscription/billing routes are disabled during testing.

@@ -2,6 +2,7 @@ import { useState } from "react"
 import { ThemeProvider } from "./components/theme-provider"
 import { AuthProvider, useAuth } from "./contexts/AuthContext"
 import { DateRangeProvider } from "./contexts/DateRangeContext"
+import { SiteFilterProvider } from "./contexts/SiteFilterContext"
 import { Navbar } from "./components/dashboard/navbar"
 import { SidebarNav } from "./components/dashboard/sidebar-nav"
 import LoginPage from "./pages/Login"
@@ -28,7 +29,6 @@ import EmployeeManagementPage from "./pages/EmployeeManagement"
 import VendorManagementPage from "./pages/VendorManagement"
 import BusinessReportPage from "./pages/BusinessReport"
 import SettingsPage from "./pages/Settings"
-import BillingPage from "./pages/Billing"
 import MasterDataPage from "./pages/MasterData"
 import MaterialInwardPage from "./pages/MaterialInward"
 import RMCGradePage from "./pages/RMCGrade"
@@ -56,7 +56,7 @@ function AppContent() {
         {/* Main Content */}
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Navbar */}
-          <Navbar />
+          <Navbar activeModule={activeModule} onModuleChange={setActiveModule} />
 
           {/* Main Content */}
           <main className="flex-1 overflow-y-auto">
@@ -88,7 +88,6 @@ function AppContent() {
               {activeModule === "employee" && <EmployeeManagementPage />}
               {activeModule === "vendor" && <VendorManagementPage />}
               {activeModule === "settings" && <SettingsPage />}
-              {activeModule === "billing" && <BillingPage />}
               {activeModule === "master-data" && <MasterDataPage />}
 
               {![
@@ -96,7 +95,7 @@ function AppContent() {
                 "work-hour", "maintenance", "expense", "analytics", "efficiency", "target", 
                 "vehicle-io", "time-motion", "challan", "inventory", "material-inward", 
                 "rmc-grade", "scrap-management", "purchase-order", "payroll", "accounts", 
-                "overhead-report", "site", "employee", "vendor", "settings", "billing", "master-data"
+                "overhead-report", "site", "employee", "vendor", "settings", "master-data"
               ].includes(activeModule) && (
                 <div className="flex flex-col items-center justify-center h-96 text-center">
                   <div className="p-8 rounded-lg bg-muted/50">
@@ -123,7 +122,9 @@ export default function App() {
   return (
     <AuthProvider>
       <DateRangeProvider>
-        <AppContent />
+        <SiteFilterProvider>
+          <AppContent />
+        </SiteFilterProvider>
       </DateRangeProvider>
     </AuthProvider>
   )

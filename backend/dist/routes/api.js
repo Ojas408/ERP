@@ -8,7 +8,7 @@ import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '../con
 import { getVendors, createVendor, updateVendor, deleteVendor } from '../controllers/vendorController';
 import { getSites, createSite, updateSite, deleteSite } from '../controllers/siteController';
 import { getConsumptions, createConsumption, updateConsumption, deleteConsumption } from '../controllers/consumptionController';
-import { getAttendances, createAttendance } from '../controllers/attendanceController';
+import { getAttendances, createAttendance, updateAttendance, deleteAttendance } from '../controllers/attendanceController';
 import { getMaintenances, createMaintenance, updateMaintenance, deleteMaintenance } from '../controllers/maintenanceController';
 import { getChallans, createChallan, updateChallan, deleteChallan } from '../controllers/challanController';
 import { getPurchaseOrders, createPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder } from '../controllers/purchaseOrderController';
@@ -16,15 +16,13 @@ import { getVehicleMovements, createVehicleMovement, updateVehicleMovement, dele
 import { getMaterialInwards, createMaterialInward, updateMaterialInward, deleteMaterialInward } from '../controllers/materialInwardController';
 import { getRmcGrades, createRmcGrade, updateRmcGrade, deleteRmcGrade } from '../controllers/rmcGradeController';
 import { getScraps, createScrap, updateScrap, deleteScrap } from '../controllers/scrapController';
+import { getOverheadEntries, getOverheadSummary, createOverheadEntry, updateOverheadEntry, deleteOverheadEntry, } from '../controllers/overheadController';
 import { getAccountsReport, getBusinessReport, getEfficiencyReport, getMaintenanceOverviewReport, getSettingsReport, getTargetReport, getTimeMotionReport, } from '../controllers/reportController';
-import { createCheckoutSession, handleStripeWebhook } from '../controllers/billingController';
 import { authenticate } from '../middleware/auth';
 import { authorize } from '../middleware/rbac';
 import uploadRouter from './upload';
 import { getMasters, createMaster, updateMaster, deleteMaster } from '../controllers/masterController';
 const router = Router();
-// Webhook must be parsed as raw body in a real app, but for simplicity here we just pass it
-router.post('/billing/webhook', handleStripeWebhook);
 // Apply authentication to all API routes below
 router.use(authenticate);
 // Document upload route
@@ -34,8 +32,6 @@ router.get('/masters/:type', authorize(['all', 'admin', 'hr', 'accounts', 'purch
 router.post('/masters/:type', authorize(['all', 'admin']), createMaster);
 router.put('/masters/:type/:id', authorize(['all', 'admin']), updateMaster);
 router.delete('/masters/:type/:id', authorize(['all', 'admin']), deleteMaster);
-// Billing
-router.post('/billing/create-checkout-session', authorize(['all', 'admin']), createCheckoutSession);
 // Stats
 router.get('/stats', authorize(['stats', 'dashboard']), getDashboardStats);
 // Reports and derived dashboards
@@ -89,6 +85,8 @@ router.delete('/consumption/:id', authorize(['consumption']), deleteConsumption)
 // Attendance
 router.get('/attendance', authorize(['attendance', 'employees']), getAttendances);
 router.post('/attendance', authorize(['attendance', 'employees']), createAttendance);
+router.put('/attendance/:id', authorize(['attendance', 'employees']), updateAttendance);
+router.delete('/attendance/:id', authorize(['attendance', 'employees']), deleteAttendance);
 // Maintenance
 router.get('/maintenance', authorize(['maintenance']), getMaintenances);
 router.post('/maintenance', authorize(['maintenance']), createMaintenance);
@@ -124,4 +122,10 @@ router.get('/scrap', authorize(['scrap']), getScraps);
 router.post('/scrap', authorize(['scrap']), createScrap);
 router.put('/scrap/:id', authorize(['scrap']), updateScrap);
 router.delete('/scrap/:id', authorize(['scrap']), deleteScrap);
+// Overhead Report
+router.get('/overhead', authorize(['overhead-report', 'reports/accounts']), getOverheadEntries);
+router.get('/overhead/summary', authorize(['overhead-report', 'reports/accounts']), getOverheadSummary);
+router.post('/overhead', authorize(['overhead-report']), createOverheadEntry);
+router.put('/overhead/:id', authorize(['overhead-report']), updateOverheadEntry);
+router.delete('/overhead/:id', authorize(['overhead-report']), deleteOverheadEntry);
 export default router;

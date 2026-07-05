@@ -1,53 +1,10 @@
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Badge } from "../ui/badge"
 import { Button } from "../ui/button"
-import { CheckCircle2, XCircle, Wrench, Edit, Eye, Calendar, Trash2 } from "lucide-react"
+import { CheckCircle2, XCircle, Wrench, RefreshCw } from "lucide-react"
 import { Progress } from "../ui/progress"
-
-const equipmentData = [
-  {
-    id: "EQ-001",
-    name: "Crusher Machine A",
-    status: "running",
-    health: 92,
-    lastMaintenance: "2 days ago",
-  },
-  {
-    id: "EQ-002",
-    name: "Excavator B-12",
-    status: "running",
-    health: 88,
-    lastMaintenance: "5 days ago",
-  },
-  {
-    id: "EQ-003",
-    name: "Conveyor Belt C",
-    status: "maintenance",
-    health: 65,
-    lastMaintenance: "Today",
-  },
-  {
-    id: "EQ-004",
-    name: "Loader D-45",
-    status: "running",
-    health: 95,
-    lastMaintenance: "1 day ago",
-  },
-  {
-    id: "EQ-005",
-    name: "Crane E-78",
-    status: "breakdown",
-    health: 45,
-    lastMaintenance: "15 days ago",
-  },
-  {
-    id: "EQ-006",
-    name: "Generator F-23",
-    status: "running",
-    health: 90,
-    lastMaintenance: "3 days ago",
-  },
-]
+import { fetchMaintenanceOverview } from "../../services/api"
 
 const statusConfig = {
   running: {
@@ -71,17 +28,39 @@ const statusConfig = {
 }
 
 export function MaintenanceOverview() {
+  const [equipmentData, setEquipmentData] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const loadOverview = async () => {
+    try {
+      setLoading(true)
+      const data = await fetchMaintenanceOverview()
+      setEquipmentData(data?.equipmentData || [])
+    } catch (error) {
+      console.error("Failed to load maintenance overview:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadOverview()
+  }, [])
+
   const runningCount = equipmentData.filter((eq) => eq.status === "running").length
   const maintenanceCount = equipmentData.filter((eq) => eq.status === "maintenance").length
   const breakdownCount = equipmentData.filter((eq) => eq.status === "breakdown").length
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Maintenance Overview</CardTitle>
+        <Button variant="outline" size="sm" className="text-xs h-8" onClick={loadOverview} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
       </CardHeader>
       <CardContent>
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-900/20">
             <CheckCircle2 className="h-8 w-8 text-green-600" />
@@ -106,10 +85,9 @@ export function MaintenanceOverview() {
           </div>
         </div>
 
-        {/* Equipment List */}
         <div className="space-y-4">
           {equipmentData.map((equipment) => {
-            const config = statusConfig[equipment.status as keyof typeof statusConfig]
+            const config = statusConfig[equipment.status as keyof typeof statusConfig] || statusConfig.running
             const StatusIcon = config.icon
 
             return (
@@ -128,7 +106,6 @@ export function MaintenanceOverview() {
                         {config.label}
                       </Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">{equipment.id}</p>
                   </div>
                 </div>
 
@@ -145,25 +122,13 @@ export function MaintenanceOverview() {
                     <p className="text-xs text-muted-foreground">Last Maintenance</p>
                     <p className="text-xs">{equipment.lastMaintenance}</p>
                   </div>
-
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                      <Eye className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                      <Edit className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0">
-                      <Calendar className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
                 </div>
               </div>
             )
           })}
+          {equipmentData.length === 0 && !loading && (
+            <p className="text-sm text-muted-foreground text-center py-8">No equipment records found</p>
+          )}
         </div>
       </CardContent>
     </Card>

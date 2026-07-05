@@ -1,94 +1,98 @@
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button"
 import { Badge } from "../components/ui/badge"
-import { Settings as SettingsIcon, User, Bell, Shield, Database, Globe, Palette, Mail } from "lucide-react"
-
-const settingsSections = [
-  {
-    id: "profile",
-    title: "Profile Settings",
-    description: "Manage your account information and preferences",
-    icon: User,
-    items: [
-      { label: "Name", value: "Admin User", editable: true },
-      { label: "Email", value: "admin@omniflowerp.com", editable: true },
-      { label: "Role", value: "System Administrator", editable: false },
-      { label: "Department", value: "Management", editable: true },
-    ]
-  },
-  {
-    id: "notifications",
-    title: "Notifications",
-    description: "Configure alerts and notification preferences",
-    icon: Bell,
-    items: [
-      { label: "Email Notifications", value: "Enabled", editable: true },
-      { label: "SMS Alerts", value: "Enabled", editable: true },
-      { label: "Production Alerts", value: "Enabled", editable: true },
-      { label: "Expense Alerts", value: "Enabled", editable: true },
-    ]
-  },
-  {
-    id: "security",
-    title: "Security & Privacy",
-    description: "Manage security settings and access control",
-    icon: Shield,
-    items: [
-      { label: "Two-Factor Authentication", value: "Enabled", editable: true },
-      { label: "Session Timeout", value: "30 minutes", editable: true },
-      { label: "Password Last Changed", value: "15 days ago", editable: false },
-      { label: "Active Sessions", value: "2 devices", editable: false },
-    ]
-  },
-  {
-    id: "system",
-    title: "System Configuration",
-    description: "Configure system-wide settings and preferences",
-    icon: Database,
-    items: [
-      { label: "Database Backup", value: "Daily at 2:00 AM", editable: true },
-      { label: "Data Retention", value: "12 months", editable: true },
-      { label: "System Language", value: "English", editable: true },
-      { label: "Time Zone", value: "IST (UTC+5:30)", editable: true },
-    ]
-  },
-  {
-    id: "appearance",
-    title: "Appearance",
-    description: "Customize the look and feel of the application",
-    icon: Palette,
-    items: [
-      { label: "Theme", value: "Light Mode", editable: true },
-      { label: "Color Scheme", value: "Blue", editable: true },
-      { label: "Font Size", value: "Medium", editable: true },
-      { label: "Compact Mode", value: "Disabled", editable: true },
-    ]
-  },
-  {
-    id: "integrations",
-    title: "Integrations",
-    description: "Connect with third-party services and APIs",
-    icon: Globe,
-    items: [
-      { label: "Payment Gateway", value: "Connected", editable: true },
-      { label: "SMS Gateway", value: "Connected", editable: true },
-      { label: "Email Service", value: "Connected", editable: true },
-      { label: "GPS Tracking", value: "Not Connected", editable: true },
-    ]
-  },
-]
+import { Settings as SettingsIcon, User, Bell, Database, Globe, Palette, Mail, RefreshCw } from "lucide-react"
+import { fetchSettingsReport } from "../services/api"
+import { useAuth } from "../contexts/AuthContext"
 
 export default function Settings() {
+  const { user } = useAuth()
+  const [report, setReport] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetchSettingsReport()
+      .then(setReport)
+      .catch(console.error)
+      .finally(() => setLoading(false))
+  }, [])
+
+  const profile = report?.profile
+  const system = report?.system
+
+  const settingsSections = [
+    {
+      id: "profile",
+      title: "Profile Settings",
+      description: "Manage your account information and preferences",
+      icon: User,
+      items: [
+        { label: "Name", value: profile?.name || user?.email || "—", editable: false },
+        { label: "Email", value: profile?.email || user?.email || "—", editable: false },
+        { label: "Role", value: profile?.role || user?.role || "—", editable: false },
+        { label: "Department", value: profile?.department || "Management", editable: false },
+      ]
+    },
+    {
+      id: "system",
+      title: "System Configuration",
+      description: "Workspace statistics and system preferences",
+      icon: Database,
+      items: [
+        { label: "Total Records", value: system?.databaseRecords?.toLocaleString() || "—", editable: false },
+        { label: "Database Backup", value: system?.backupSchedule || "Daily at 2:00 AM", editable: false },
+        { label: "Data Retention", value: system?.retention || "12 months", editable: false },
+        { label: "Time Zone", value: system?.timezone || "IST (UTC+5:30)", editable: false },
+      ]
+    },
+    {
+      id: "notifications",
+      title: "Notifications",
+      description: "Alert preferences (configure after go-live)",
+      icon: Bell,
+      items: [
+        { label: "Email Notifications", value: "Enabled", editable: false },
+        { label: "Low Stock Alerts", value: "Enabled", editable: false },
+        { label: "Maintenance Alerts", value: "Enabled", editable: false },
+      ]
+    },
+    {
+      id: "appearance",
+      title: "Appearance",
+      description: "Use the theme toggle in the top navigation bar",
+      icon: Palette,
+      items: [
+        { label: "Theme", value: "Light / Dark (navbar toggle)", editable: false },
+      ]
+    },
+    {
+      id: "integrations",
+      title: "Integrations",
+      description: "External services (available in future releases)",
+      icon: Globe,
+      items: [
+        { label: "GPS Tracking", value: "Not Connected", editable: false },
+        { label: "Email Service", value: "Not Connected", editable: false },
+      ]
+    },
+  ]
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl mb-2">Settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Configure OmniFlow ERP system preferences
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl mb-2">Settings</h1>
+          <p className="text-sm text-muted-foreground">
+            System preferences and workspace information
+          </p>
+        </div>
+        <Button variant="outline" className="text-xs h-9" disabled={loading} onClick={() => fetchSettingsReport().then(setReport)}>
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
       </div>
 
-      {/* Settings Sections */}
       <div className="grid grid-cols-1 gap-6">
         {settingsSections.map((section) => {
           const Icon = section.icon
@@ -113,16 +117,7 @@ export default function Settings() {
                         <p className="text-xs mb-1">{item.label}</p>
                         <p className="text-xs text-muted-foreground">{item.value}</p>
                       </div>
-                      {item.editable && (
-                        <Button variant="outline" size="sm" className="h-8 text-xs">
-                          Edit
-                        </Button>
-                      )}
-                      {!item.editable && (
-                        <Badge variant="outline" className="text-xs">
-                          Read Only
-                        </Badge>
-                      )}
+                      <Badge variant="outline" className="text-xs">Read Only</Badge>
                     </div>
                   ))}
                 </div>
@@ -132,27 +127,23 @@ export default function Settings() {
         })}
       </div>
 
-      {/* Actions */}
       <Card>
         <CardHeader>
           <CardTitle>Advanced Actions</CardTitle>
-          <CardDescription>Perform system maintenance and administrative tasks</CardDescription>
+          <CardDescription>Available in a future release</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
-            <Button variant="outline" className="text-xs h-9">
+            <Button variant="outline" className="text-xs h-9" disabled>
               <Database className="h-4 w-4 mr-2" />
               Backup Database
             </Button>
-            <Button variant="outline" className="text-xs h-9">
+            <Button variant="outline" className="text-xs h-9" disabled>
               <Mail className="h-4 w-4 mr-2" />
               Test Email Configuration
             </Button>
-            <Button variant="outline" className="text-xs h-9">
+            <Button variant="outline" className="text-xs h-9" disabled>
               <SettingsIcon className="h-4 w-4 mr-2" />
-              Reset to Defaults
-            </Button>
-            <Button variant="outline" className="text-xs h-9">
               Export System Logs
             </Button>
           </div>

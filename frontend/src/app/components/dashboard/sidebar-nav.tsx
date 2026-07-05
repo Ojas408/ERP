@@ -21,7 +21,6 @@ import {
   ShoppingCart,
   Banknote,
   Landmark,
-  CreditCard,
   Briefcase,
   HardHat,
   Database,
@@ -60,7 +59,6 @@ const menuItems = [
   { icon: MapPin, label: "Site Management", id: "site" },
   { icon: UserCheck, label: "Employee Management", id: "employee" },
   { icon: UsersRound, label: "Vendor Management", id: "vendor" },
-  { icon: CreditCard, label: "Billing & Subscription", id: "billing" },
   { icon: Database, label: "Master Data", id: "master-data" },
   { icon: Settings, label: "Settings", id: "settings" },
 ]
@@ -68,6 +66,7 @@ const menuItems = [
 interface SidebarNavProps {
   activeModule: string
   onModuleChange: (moduleId: string) => void
+  mobile?: boolean
 }
 
 const allModules = menuItems.map(m => m.id);
@@ -83,7 +82,7 @@ const rolePermissions: Record<UserRole, string[]> = {
   "Viewer": ["dashboard", "projects", "production", "efficiency"]
 }
 
-export function SidebarNav({ activeModule, onModuleChange }: SidebarNavProps) {
+export function SidebarNav({ activeModule, onModuleChange, mobile }: SidebarNavProps) {
   const { user } = useAuth()
 
   const filteredMenuItems = menuItems.filter(item => {
@@ -92,7 +91,7 @@ export function SidebarNav({ activeModule, onModuleChange }: SidebarNavProps) {
   })
 
   return (
-    <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-sidebar">
+    <aside className={mobile ? "flex h-full w-full flex-col bg-sidebar" : "hidden md:flex h-screen w-64 flex-col border-r bg-sidebar"}>
       <ScrollArea className="flex-1 min-h-0 py-4">
         <nav className="flex flex-col gap-1 px-3">
           {filteredMenuItems.map((item) => {

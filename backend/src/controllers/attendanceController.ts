@@ -60,3 +60,43 @@ export const createAttendance = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to create attendance' });
   }
 };
+
+export const updateAttendance = async (req: AuthRequest, res: Response) => {
+  const tenantId = req.user!.tenantId;
+  const { userId, email } = req.user!;
+  const id = req.params.id as string;
+  const { employeeId, hoursWorked, overtime, status, date } = req.body;
+  try {
+    await prisma.attendance.updateMany({
+      where: { id, tenantId },
+      data: {
+        employeeId,
+        hoursWorked: hoursWorked !== undefined ? parseFloat(hoursWorked) : undefined,
+        overtime: overtime !== undefined ? parseFloat(overtime) : undefined,
+        status,
+        date: date ? new Date(date) : undefined,
+      },
+    });
+    const attendance = await prisma.attendance.findFirst({
+      where: { id, tenantId },
+      include: { employee: true },
+    });
+    await logActivity(userId, email, tenantId, 'UPDATE', 'Attendance', `Updated attendance ID: ${id}`);
+    res.json(attendance);
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to update attendance' });
+  }
+};
+
+export const deleteAttendance = async (req: AuthRequest, res: Response) => {
+  const tenantId = req.user!.tenantId;
+  const { userId, email } = req.user!;
+  const id = req.params.id as string;
+  try {
+    await prisma.attendance.deleteMany({ where: { id, tenantId } });
+    await logActivity(userId, email, tenantId, 'DELETE', 'Attendance', `Deleted attendance ID: ${id}`);
+    res.json({ message: 'Deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to delete attendance' });
+  }
+};

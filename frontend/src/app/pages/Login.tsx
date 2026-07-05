@@ -44,7 +44,7 @@ export default function Login() {
               <Building2 className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Construction ERP SaaS</CardTitle>
+          <CardTitle className="text-2xl">Construction ERP</CardTitle>
           <CardDescription>
             {isRegister ? "Create a new company workspace" : "Sign in to access your dashboard"}
           </CardDescription>
