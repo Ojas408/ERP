@@ -8,7 +8,7 @@ services:
     plan: free
     region: oregon
     rootDir: backend
-    buildCommand: npm install --include=dev && npm run build && npm run db:push:retry
+    buildCommand: npm install --include=dev && npm run build && npm run db:push:retry && if [ "$SEED_DB" = "true" ]; then npm run db:seed; fi
     startCommand: npm start
     healthCheckPath: /health
     envVars:
@@ -22,3 +22,5 @@ services:
         value: "*"
       - key: DATABASE_URL
         sync: false
+      - key: SEED_DB
+        value: "false"
