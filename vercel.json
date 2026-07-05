@@ -1,5 +1,5 @@
 {
-  "installCommand": "npm install --prefix frontend",
+  "installCommand": "rm -rf frontend/node_modules && npm install --prefix frontend",
   "buildCommand": "npm run build --prefix frontend",
   "outputDirectory": "frontend/dist",
   "framework": "vite"
