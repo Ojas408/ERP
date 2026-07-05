@@ -1,9 +1,15 @@
-import prisma from '../lib/prisma';
-import { logActivity } from '../utils/audit';
-export const getExpenses = async (req, res) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deleteExpense = exports.updateExpense = exports.createExpense = exports.getExpenses = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const audit_1 = require("../utils/audit");
+const getExpenses = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const expenses = await prisma.expense.findMany({
+        const expenses = await prisma_1.default.expense.findMany({
             where: { tenantId },
             orderBy: { date: 'desc' },
         });
@@ -13,13 +19,14 @@ export const getExpenses = async (req, res) => {
         res.status(500).json({ message: 'Error fetching expenses' });
     }
 };
-export const createExpense = async (req, res) => {
+exports.getExpenses = getExpenses;
+const createExpense = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const data = req.body;
     try {
         if (Array.isArray(data)) {
-            const expenses = await prisma.$transaction(data.map(item => prisma.expense.create({
+            const expenses = await prisma_1.default.$transaction(data.map(item => prisma_1.default.expense.create({
                 data: {
                     tenantId,
                     category: item.category || 'Miscellaneous',
@@ -29,11 +36,11 @@ export const createExpense = async (req, res) => {
                     date: item.date ? new Date(item.date) : new Date(),
                 }
             })));
-            await logActivity(userId, email, tenantId, 'BULK_CREATE', 'Expense', `Imported ${expenses.length} expenses`);
+            await (0, audit_1.logActivity)(userId, email, tenantId, 'BULK_CREATE', 'Expense', `Imported ${expenses.length} expenses`);
             res.status(201).json(expenses);
         }
         else {
-            const expense = await prisma.expense.create({
+            const expense = await prisma_1.default.expense.create({
                 data: {
                     tenantId,
                     category: data.category,
@@ -43,7 +50,7 @@ export const createExpense = async (req, res) => {
                     date: data.date ? new Date(data.date) : undefined,
                 },
             });
-            await logActivity(userId, email, tenantId, 'CREATE', 'Expense', `Created expense: ${expense.category} - ₹${expense.amount}`);
+            await (0, audit_1.logActivity)(userId, email, tenantId, 'CREATE', 'Expense', `Created expense: ${expense.category} - ₹${expense.amount}`);
             res.status(201).json(expense);
         }
     }
@@ -52,13 +59,14 @@ export const createExpense = async (req, res) => {
         res.status(500).json({ message: 'Error creating expense' });
     }
 };
-export const updateExpense = async (req, res) => {
+exports.createExpense = createExpense;
+const updateExpense = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const id = req.params.id;
     const { category, amount, description, date, paymentStatus } = req.body;
     try {
-        await prisma.expense.updateMany({
+        await prisma_1.default.expense.updateMany({
             where: { id, tenantId },
             data: {
                 category,
@@ -68,24 +76,26 @@ export const updateExpense = async (req, res) => {
                 date: date ? new Date(date) : undefined,
             },
         });
-        const expense = await prisma.expense.findFirst({ where: { id, tenantId } });
-        await logActivity(userId, email, tenantId, 'UPDATE', 'Expense', `Updated expense ID: ${id}`);
+        const expense = await prisma_1.default.expense.findFirst({ where: { id, tenantId } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'UPDATE', 'Expense', `Updated expense ID: ${id}`);
         res.json(expense);
     }
     catch (error) {
         res.status(500).json({ message: 'Error updating expense' });
     }
 };
-export const deleteExpense = async (req, res) => {
+exports.updateExpense = updateExpense;
+const deleteExpense = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const id = req.params.id;
     try {
-        await prisma.expense.deleteMany({ where: { id, tenantId } });
-        await logActivity(userId, email, tenantId, 'DELETE', 'Expense', `Deleted expense ID: ${id}`);
+        await prisma_1.default.expense.deleteMany({ where: { id, tenantId } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'DELETE', 'Expense', `Deleted expense ID: ${id}`);
         res.json({ message: 'Expense deleted successfully' });
     }
     catch (error) {
         res.status(500).json({ message: 'Error deleting expense' });
     }
 };
+exports.deleteExpense = deleteExpense;

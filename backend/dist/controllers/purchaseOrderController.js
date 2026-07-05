@@ -1,8 +1,14 @@
-import prisma from '../lib/prisma';
-export const getPurchaseOrders = async (req, res) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deletePurchaseOrder = exports.updatePurchaseOrder = exports.createPurchaseOrder = exports.getPurchaseOrders = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const getPurchaseOrders = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const orders = await prisma.purchaseOrder.findMany({
+        const orders = await prisma_1.default.purchaseOrder.findMany({
             where: { tenantId },
             include: { vendor: true },
             orderBy: { date: 'desc' },
@@ -13,11 +19,12 @@ export const getPurchaseOrders = async (req, res) => {
         res.status(500).json({ message: 'Error fetching purchase orders' });
     }
 };
-export const createPurchaseOrder = async (req, res) => {
+exports.getPurchaseOrders = getPurchaseOrders;
+const createPurchaseOrder = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { orderNumber, date, vendorId, totalAmount, status, items } = req.body;
     try {
-        const order = await prisma.purchaseOrder.create({
+        const order = await prisma_1.default.purchaseOrder.create({
             data: {
                 tenantId,
                 orderNumber,
@@ -34,12 +41,13 @@ export const createPurchaseOrder = async (req, res) => {
         res.status(500).json({ message: 'Error creating purchase order' });
     }
 };
-export const updatePurchaseOrder = async (req, res) => {
+exports.createPurchaseOrder = createPurchaseOrder;
+const updatePurchaseOrder = async (req, res) => {
     const tenantId = req.user.tenantId;
     const id = req.params.id;
     const { orderNumber, date, vendorId, totalAmount, status, items } = req.body;
     try {
-        await prisma.purchaseOrder.updateMany({
+        await prisma_1.default.purchaseOrder.updateMany({
             where: { id, tenantId },
             data: {
                 orderNumber,
@@ -50,21 +58,23 @@ export const updatePurchaseOrder = async (req, res) => {
                 items,
             },
         });
-        const order = await prisma.purchaseOrder.findFirst({ where: { id, tenantId } });
+        const order = await prisma_1.default.purchaseOrder.findFirst({ where: { id, tenantId } });
         res.json(order);
     }
     catch (error) {
         res.status(500).json({ message: 'Error updating purchase order' });
     }
 };
-export const deletePurchaseOrder = async (req, res) => {
+exports.updatePurchaseOrder = updatePurchaseOrder;
+const deletePurchaseOrder = async (req, res) => {
     const tenantId = req.user.tenantId;
     const id = req.params.id;
     try {
-        await prisma.purchaseOrder.deleteMany({ where: { id, tenantId } });
+        await prisma_1.default.purchaseOrder.deleteMany({ where: { id, tenantId } });
         res.json({ message: 'Purchase order deleted successfully' });
     }
     catch (error) {
         res.status(500).json({ message: 'Error deleting purchase order' });
     }
 };
+exports.deletePurchaseOrder = deletePurchaseOrder;

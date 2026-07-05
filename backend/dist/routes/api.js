@@ -1,131 +1,136 @@
-import { Router } from 'express';
-import { getProductions, createProduction, deleteProduction, updateProduction } from '../controllers/productionController';
-import { getInventory, createInventoryItem, deleteInventoryItem, updateInventoryItem } from '../controllers/inventoryController';
-import { getExpenses, createExpense, updateExpense, deleteExpense } from '../controllers/expenseController';
-import { getDashboardStats } from '../controllers/statsController';
-import { getEmployees, createEmployee, deleteEmployee, updateEmployee } from '../controllers/employeeController';
-import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '../controllers/vehicleController';
-import { getVendors, createVendor, updateVendor, deleteVendor } from '../controllers/vendorController';
-import { getSites, createSite, updateSite, deleteSite } from '../controllers/siteController';
-import { getConsumptions, createConsumption, updateConsumption, deleteConsumption } from '../controllers/consumptionController';
-import { getAttendances, createAttendance, updateAttendance, deleteAttendance } from '../controllers/attendanceController';
-import { getMaintenances, createMaintenance, updateMaintenance, deleteMaintenance } from '../controllers/maintenanceController';
-import { getChallans, createChallan, updateChallan, deleteChallan } from '../controllers/challanController';
-import { getPurchaseOrders, createPurchaseOrder, updatePurchaseOrder, deletePurchaseOrder } from '../controllers/purchaseOrderController';
-import { getVehicleMovements, createVehicleMovement, updateVehicleMovement, deleteVehicleMovement } from '../controllers/vehicleMovementController';
-import { getMaterialInwards, createMaterialInward, updateMaterialInward, deleteMaterialInward } from '../controllers/materialInwardController';
-import { getRmcGrades, createRmcGrade, updateRmcGrade, deleteRmcGrade } from '../controllers/rmcGradeController';
-import { getScraps, createScrap, updateScrap, deleteScrap } from '../controllers/scrapController';
-import { getOverheadEntries, getOverheadSummary, createOverheadEntry, updateOverheadEntry, deleteOverheadEntry, } from '../controllers/overheadController';
-import { getAccountsReport, getBusinessReport, getEfficiencyReport, getMaintenanceOverviewReport, getSettingsReport, getTargetReport, getTimeMotionReport, } from '../controllers/reportController';
-import { authenticate } from '../middleware/auth';
-import { authorize } from '../middleware/rbac';
-import uploadRouter from './upload';
-import { getMasters, createMaster, updateMaster, deleteMaster } from '../controllers/masterController';
-const router = Router();
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const productionController_1 = require("../controllers/productionController");
+const inventoryController_1 = require("../controllers/inventoryController");
+const expenseController_1 = require("../controllers/expenseController");
+const statsController_1 = require("../controllers/statsController");
+const employeeController_1 = require("../controllers/employeeController");
+const vehicleController_1 = require("../controllers/vehicleController");
+const vendorController_1 = require("../controllers/vendorController");
+const siteController_1 = require("../controllers/siteController");
+const consumptionController_1 = require("../controllers/consumptionController");
+const attendanceController_1 = require("../controllers/attendanceController");
+const maintenanceController_1 = require("../controllers/maintenanceController");
+const challanController_1 = require("../controllers/challanController");
+const purchaseOrderController_1 = require("../controllers/purchaseOrderController");
+const vehicleMovementController_1 = require("../controllers/vehicleMovementController");
+const materialInwardController_1 = require("../controllers/materialInwardController");
+const rmcGradeController_1 = require("../controllers/rmcGradeController");
+const scrapController_1 = require("../controllers/scrapController");
+const overheadController_1 = require("../controllers/overheadController");
+const reportController_1 = require("../controllers/reportController");
+const auth_1 = require("../middleware/auth");
+const rbac_1 = require("../middleware/rbac");
+const upload_1 = __importDefault(require("./upload"));
+const masterController_1 = require("../controllers/masterController");
+const router = (0, express_1.Router)();
 // Apply authentication to all API routes below
-router.use(authenticate);
+router.use(auth_1.authenticate);
 // Document upload route
-router.use('/upload', uploadRouter);
+router.use('/upload', upload_1.default);
 // Master Data routes
-router.get('/masters/:type', authorize(['all', 'admin', 'hr', 'accounts', 'purchase', 'site engineer']), getMasters);
-router.post('/masters/:type', authorize(['all', 'admin']), createMaster);
-router.put('/masters/:type/:id', authorize(['all', 'admin']), updateMaster);
-router.delete('/masters/:type/:id', authorize(['all', 'admin']), deleteMaster);
+router.get('/masters/:type', (0, rbac_1.authorize)(['all', 'admin', 'hr', 'accounts', 'purchase', 'site engineer']), masterController_1.getMasters);
+router.post('/masters/:type', (0, rbac_1.authorize)(['all', 'admin']), masterController_1.createMaster);
+router.put('/masters/:type/:id', (0, rbac_1.authorize)(['all', 'admin']), masterController_1.updateMaster);
+router.delete('/masters/:type/:id', (0, rbac_1.authorize)(['all', 'admin']), masterController_1.deleteMaster);
 // Stats
-router.get('/stats', authorize(['stats', 'dashboard']), getDashboardStats);
+router.get('/stats', (0, rbac_1.authorize)(['stats', 'dashboard']), statsController_1.getDashboardStats);
 // Reports and derived dashboards
-router.get('/reports/accounts', authorize(['reports/accounts']), getAccountsReport);
-router.get('/reports/business', authorize(['reports/business']), getBusinessReport);
-router.get('/reports/efficiency', authorize(['reports/efficiency']), getEfficiencyReport);
-router.get('/reports/targets', authorize(['reports/targets']), getTargetReport);
-router.get('/reports/time-motion', authorize(['reports/time-motion']), getTimeMotionReport);
-router.get('/reports/maintenance-overview', authorize(['reports/maintenance-overview']), getMaintenanceOverviewReport);
-router.get('/reports/settings', authorize(['all']), getSettingsReport);
+router.get('/reports/accounts', (0, rbac_1.authorize)(['reports/accounts']), reportController_1.getAccountsReport);
+router.get('/reports/business', (0, rbac_1.authorize)(['reports/business']), reportController_1.getBusinessReport);
+router.get('/reports/efficiency', (0, rbac_1.authorize)(['reports/efficiency']), reportController_1.getEfficiencyReport);
+router.get('/reports/targets', (0, rbac_1.authorize)(['reports/targets']), reportController_1.getTargetReport);
+router.get('/reports/time-motion', (0, rbac_1.authorize)(['reports/time-motion']), reportController_1.getTimeMotionReport);
+router.get('/reports/maintenance-overview', (0, rbac_1.authorize)(['reports/maintenance-overview']), reportController_1.getMaintenanceOverviewReport);
+router.get('/reports/settings', (0, rbac_1.authorize)(['all']), reportController_1.getSettingsReport);
 // Production
-router.get('/production', authorize(['production']), getProductions);
-router.post('/production', authorize(['production']), createProduction);
-router.put('/production/:id', authorize(['production']), updateProduction);
-router.delete('/production/:id', authorize(['production']), deleteProduction);
+router.get('/production', (0, rbac_1.authorize)(['production']), productionController_1.getProductions);
+router.post('/production', (0, rbac_1.authorize)(['production']), productionController_1.createProduction);
+router.put('/production/:id', (0, rbac_1.authorize)(['production']), productionController_1.updateProduction);
+router.delete('/production/:id', (0, rbac_1.authorize)(['production']), productionController_1.deleteProduction);
 // Inventory
-router.get('/inventory', authorize(['inventory']), getInventory);
-router.post('/inventory', authorize(['inventory']), createInventoryItem);
-router.put('/inventory/:id', authorize(['inventory']), updateInventoryItem);
-router.delete('/inventory/:id', authorize(['inventory']), deleteInventoryItem);
+router.get('/inventory', (0, rbac_1.authorize)(['inventory']), inventoryController_1.getInventory);
+router.post('/inventory', (0, rbac_1.authorize)(['inventory']), inventoryController_1.createInventoryItem);
+router.put('/inventory/:id', (0, rbac_1.authorize)(['inventory']), inventoryController_1.updateInventoryItem);
+router.delete('/inventory/:id', (0, rbac_1.authorize)(['inventory']), inventoryController_1.deleteInventoryItem);
 // Expenses
-router.get('/expenses', authorize(['expenses']), getExpenses);
-router.post('/expenses', authorize(['expenses']), createExpense);
-router.put('/expenses/:id', authorize(['expenses']), updateExpense);
-router.delete('/expenses/:id', authorize(['expenses']), deleteExpense);
+router.get('/expenses', (0, rbac_1.authorize)(['expenses']), expenseController_1.getExpenses);
+router.post('/expenses', (0, rbac_1.authorize)(['expenses']), expenseController_1.createExpense);
+router.put('/expenses/:id', (0, rbac_1.authorize)(['expenses']), expenseController_1.updateExpense);
+router.delete('/expenses/:id', (0, rbac_1.authorize)(['expenses']), expenseController_1.deleteExpense);
 // Employees
-router.get('/employees', authorize(['employees']), getEmployees);
-router.post('/employees', authorize(['employees']), createEmployee);
-router.put('/employees/:id', authorize(['employees']), updateEmployee);
-router.delete('/employees/:id', authorize(['employees']), deleteEmployee);
+router.get('/employees', (0, rbac_1.authorize)(['employees']), employeeController_1.getEmployees);
+router.post('/employees', (0, rbac_1.authorize)(['employees']), employeeController_1.createEmployee);
+router.put('/employees/:id', (0, rbac_1.authorize)(['employees']), employeeController_1.updateEmployee);
+router.delete('/employees/:id', (0, rbac_1.authorize)(['employees']), employeeController_1.deleteEmployee);
 // Vehicles
-router.get('/vehicles', authorize(['vehicles', 'vehicle-io', 'time-motion', 'maintenance', 'challans']), getVehicles);
-router.post('/vehicles', authorize(['vehicles']), createVehicle);
-router.put('/vehicles/:id', authorize(['vehicles']), updateVehicle);
-router.delete('/vehicles/:id', authorize(['vehicles']), deleteVehicle);
+router.get('/vehicles', (0, rbac_1.authorize)(['vehicles', 'vehicle-io', 'time-motion', 'maintenance', 'challans']), vehicleController_1.getVehicles);
+router.post('/vehicles', (0, rbac_1.authorize)(['vehicles']), vehicleController_1.createVehicle);
+router.put('/vehicles/:id', (0, rbac_1.authorize)(['vehicles']), vehicleController_1.updateVehicle);
+router.delete('/vehicles/:id', (0, rbac_1.authorize)(['vehicles']), vehicleController_1.deleteVehicle);
 // Vendors
-router.get('/vendors', authorize(['vendors']), getVendors);
-router.post('/vendors', authorize(['vendors']), createVendor);
-router.put('/vendors/:id', authorize(['vendors']), updateVendor);
-router.delete('/vendors/:id', authorize(['vendors']), deleteVendor);
+router.get('/vendors', (0, rbac_1.authorize)(['vendors']), vendorController_1.getVendors);
+router.post('/vendors', (0, rbac_1.authorize)(['vendors']), vendorController_1.createVendor);
+router.put('/vendors/:id', (0, rbac_1.authorize)(['vendors']), vendorController_1.updateVendor);
+router.delete('/vendors/:id', (0, rbac_1.authorize)(['vendors']), vendorController_1.deleteVendor);
 // Sites
-router.get('/sites', authorize(['sites', 'challans']), getSites);
-router.post('/sites', authorize(['sites']), createSite);
-router.put('/sites/:id', authorize(['sites']), updateSite);
-router.delete('/sites/:id', authorize(['sites']), deleteSite);
+router.get('/sites', (0, rbac_1.authorize)(['sites', 'challans']), siteController_1.getSites);
+router.post('/sites', (0, rbac_1.authorize)(['sites']), siteController_1.createSite);
+router.put('/sites/:id', (0, rbac_1.authorize)(['sites']), siteController_1.updateSite);
+router.delete('/sites/:id', (0, rbac_1.authorize)(['sites']), siteController_1.deleteSite);
 // Consumption
-router.get('/consumption', authorize(['consumption']), getConsumptions);
-router.post('/consumption', authorize(['consumption']), createConsumption);
-router.put('/consumption/:id', authorize(['consumption']), updateConsumption);
-router.delete('/consumption/:id', authorize(['consumption']), deleteConsumption);
+router.get('/consumption', (0, rbac_1.authorize)(['consumption']), consumptionController_1.getConsumptions);
+router.post('/consumption', (0, rbac_1.authorize)(['consumption']), consumptionController_1.createConsumption);
+router.put('/consumption/:id', (0, rbac_1.authorize)(['consumption']), consumptionController_1.updateConsumption);
+router.delete('/consumption/:id', (0, rbac_1.authorize)(['consumption']), consumptionController_1.deleteConsumption);
 // Attendance
-router.get('/attendance', authorize(['attendance', 'employees']), getAttendances);
-router.post('/attendance', authorize(['attendance', 'employees']), createAttendance);
-router.put('/attendance/:id', authorize(['attendance', 'employees']), updateAttendance);
-router.delete('/attendance/:id', authorize(['attendance', 'employees']), deleteAttendance);
+router.get('/attendance', (0, rbac_1.authorize)(['attendance', 'employees']), attendanceController_1.getAttendances);
+router.post('/attendance', (0, rbac_1.authorize)(['attendance', 'employees']), attendanceController_1.createAttendance);
+router.put('/attendance/:id', (0, rbac_1.authorize)(['attendance', 'employees']), attendanceController_1.updateAttendance);
+router.delete('/attendance/:id', (0, rbac_1.authorize)(['attendance', 'employees']), attendanceController_1.deleteAttendance);
 // Maintenance
-router.get('/maintenance', authorize(['maintenance']), getMaintenances);
-router.post('/maintenance', authorize(['maintenance']), createMaintenance);
-router.put('/maintenance/:id', authorize(['maintenance']), updateMaintenance);
-router.delete('/maintenance/:id', authorize(['maintenance']), deleteMaintenance);
+router.get('/maintenance', (0, rbac_1.authorize)(['maintenance']), maintenanceController_1.getMaintenances);
+router.post('/maintenance', (0, rbac_1.authorize)(['maintenance']), maintenanceController_1.createMaintenance);
+router.put('/maintenance/:id', (0, rbac_1.authorize)(['maintenance']), maintenanceController_1.updateMaintenance);
+router.delete('/maintenance/:id', (0, rbac_1.authorize)(['maintenance']), maintenanceController_1.deleteMaintenance);
 // Challan
-router.get('/challans', authorize(['challans']), getChallans);
-router.post('/challans', authorize(['challans']), createChallan);
-router.put('/challans/:id', authorize(['challans']), updateChallan);
-router.delete('/challans/:id', authorize(['challans']), deleteChallan);
+router.get('/challans', (0, rbac_1.authorize)(['challans']), challanController_1.getChallans);
+router.post('/challans', (0, rbac_1.authorize)(['challans']), challanController_1.createChallan);
+router.put('/challans/:id', (0, rbac_1.authorize)(['challans']), challanController_1.updateChallan);
+router.delete('/challans/:id', (0, rbac_1.authorize)(['challans']), challanController_1.deleteChallan);
 // Purchase Orders
-router.get('/purchase-orders', authorize(['purchase-orders']), getPurchaseOrders);
-router.post('/purchase-orders', authorize(['purchase-orders']), createPurchaseOrder);
-router.put('/purchase-orders/:id', authorize(['purchase-orders']), updatePurchaseOrder);
-router.delete('/purchase-orders/:id', authorize(['purchase-orders']), deletePurchaseOrder);
+router.get('/purchase-orders', (0, rbac_1.authorize)(['purchase-orders']), purchaseOrderController_1.getPurchaseOrders);
+router.post('/purchase-orders', (0, rbac_1.authorize)(['purchase-orders']), purchaseOrderController_1.createPurchaseOrder);
+router.put('/purchase-orders/:id', (0, rbac_1.authorize)(['purchase-orders']), purchaseOrderController_1.updatePurchaseOrder);
+router.delete('/purchase-orders/:id', (0, rbac_1.authorize)(['purchase-orders']), purchaseOrderController_1.deletePurchaseOrder);
 // Vehicle Movements
-router.get('/vehicle-movements', authorize(['vehicle-io', 'time-motion']), getVehicleMovements);
-router.post('/vehicle-movements', authorize(['vehicle-io']), createVehicleMovement);
-router.put('/vehicle-movements/:id', authorize(['vehicle-io']), updateVehicleMovement);
-router.delete('/vehicle-movements/:id', authorize(['vehicle-io']), deleteVehicleMovement);
+router.get('/vehicle-movements', (0, rbac_1.authorize)(['vehicle-io', 'time-motion']), vehicleMovementController_1.getVehicleMovements);
+router.post('/vehicle-movements', (0, rbac_1.authorize)(['vehicle-io']), vehicleMovementController_1.createVehicleMovement);
+router.put('/vehicle-movements/:id', (0, rbac_1.authorize)(['vehicle-io']), vehicleMovementController_1.updateVehicleMovement);
+router.delete('/vehicle-movements/:id', (0, rbac_1.authorize)(['vehicle-io']), vehicleMovementController_1.deleteVehicleMovement);
 // Material Inward
-router.get('/material-inward', authorize(['material-inward']), getMaterialInwards);
-router.post('/material-inward', authorize(['material-inward']), createMaterialInward);
-router.put('/material-inward/:id', authorize(['material-inward']), updateMaterialInward);
-router.delete('/material-inward/:id', authorize(['material-inward']), deleteMaterialInward);
+router.get('/material-inward', (0, rbac_1.authorize)(['material-inward']), materialInwardController_1.getMaterialInwards);
+router.post('/material-inward', (0, rbac_1.authorize)(['material-inward']), materialInwardController_1.createMaterialInward);
+router.put('/material-inward/:id', (0, rbac_1.authorize)(['material-inward']), materialInwardController_1.updateMaterialInward);
+router.delete('/material-inward/:id', (0, rbac_1.authorize)(['material-inward']), materialInwardController_1.deleteMaterialInward);
 // RMC Grades
-router.get('/rmc-grades', authorize(['rmc-grades']), getRmcGrades);
-router.post('/rmc-grades', authorize(['rmc-grades']), createRmcGrade);
-router.put('/rmc-grades/:id', authorize(['rmc-grades']), updateRmcGrade);
-router.delete('/rmc-grades/:id', authorize(['rmc-grades']), deleteRmcGrade);
+router.get('/rmc-grades', (0, rbac_1.authorize)(['rmc-grades']), rmcGradeController_1.getRmcGrades);
+router.post('/rmc-grades', (0, rbac_1.authorize)(['rmc-grades']), rmcGradeController_1.createRmcGrade);
+router.put('/rmc-grades/:id', (0, rbac_1.authorize)(['rmc-grades']), rmcGradeController_1.updateRmcGrade);
+router.delete('/rmc-grades/:id', (0, rbac_1.authorize)(['rmc-grades']), rmcGradeController_1.deleteRmcGrade);
 // Scrap Management
-router.get('/scrap', authorize(['scrap']), getScraps);
-router.post('/scrap', authorize(['scrap']), createScrap);
-router.put('/scrap/:id', authorize(['scrap']), updateScrap);
-router.delete('/scrap/:id', authorize(['scrap']), deleteScrap);
+router.get('/scrap', (0, rbac_1.authorize)(['scrap']), scrapController_1.getScraps);
+router.post('/scrap', (0, rbac_1.authorize)(['scrap']), scrapController_1.createScrap);
+router.put('/scrap/:id', (0, rbac_1.authorize)(['scrap']), scrapController_1.updateScrap);
+router.delete('/scrap/:id', (0, rbac_1.authorize)(['scrap']), scrapController_1.deleteScrap);
 // Overhead Report
-router.get('/overhead', authorize(['overhead-report', 'reports/accounts']), getOverheadEntries);
-router.get('/overhead/summary', authorize(['overhead-report', 'reports/accounts']), getOverheadSummary);
-router.post('/overhead', authorize(['overhead-report']), createOverheadEntry);
-router.put('/overhead/:id', authorize(['overhead-report']), updateOverheadEntry);
-router.delete('/overhead/:id', authorize(['overhead-report']), deleteOverheadEntry);
-export default router;
+router.get('/overhead', (0, rbac_1.authorize)(['overhead-report', 'reports/accounts']), overheadController_1.getOverheadEntries);
+router.get('/overhead/summary', (0, rbac_1.authorize)(['overhead-report', 'reports/accounts']), overheadController_1.getOverheadSummary);
+router.post('/overhead', (0, rbac_1.authorize)(['overhead-report']), overheadController_1.createOverheadEntry);
+router.put('/overhead/:id', (0, rbac_1.authorize)(['overhead-report']), overheadController_1.updateOverheadEntry);
+router.delete('/overhead/:id', (0, rbac_1.authorize)(['overhead-report']), overheadController_1.deleteOverheadEntry);
+exports.default = router;

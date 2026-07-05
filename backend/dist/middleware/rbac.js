@@ -1,3 +1,6 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.authorize = void 0;
 // Define the role hierarchy or allowed modules per role
 const rolePermissions = {
     'Super Admin': ['all'],
@@ -9,7 +12,7 @@ const rolePermissions = {
     'Manager': ['reports/accounts', 'reports/business', 'reports/efficiency', 'reports/targets', 'reports/time-motion', 'reports/maintenance-overview', 'stats', 'dashboard', 'overhead-report', 'overhead'],
     'Viewer': ['read_only'] // Special handling for Viewer
 };
-export const authorize = (allowedModules) => {
+const authorize = (allowedModules) => {
     return (req, res, next) => {
         if (!req.user) {
             return res.status(401).json({ message: 'Authentication required' });
@@ -34,3 +37,4 @@ export const authorize = (allowedModules) => {
         }
     };
 };
+exports.authorize = authorize;

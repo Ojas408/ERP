@@ -1,8 +1,14 @@
-import prisma from '../lib/prisma';
-export const getMaintenances = async (req, res) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deleteMaintenance = exports.updateMaintenance = exports.createMaintenance = exports.getMaintenances = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const getMaintenances = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const maintenances = await prisma.maintenance.findMany({
+        const maintenances = await prisma_1.default.maintenance.findMany({
             where: { tenantId },
             include: { vehicle: true },
             orderBy: { date: 'desc' },
@@ -13,11 +19,12 @@ export const getMaintenances = async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch maintenances' });
     }
 };
-export const createMaintenance = async (req, res) => {
+exports.getMaintenances = getMaintenances;
+const createMaintenance = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const { vehicleId, type, cost, description, date, status } = req.body;
-        const maintenance = await prisma.$transaction(async (tx) => {
+        const maintenance = await prisma_1.default.$transaction(async (tx) => {
             const newMaintenance = await tx.maintenance.create({
                 data: {
                     tenantId,
@@ -50,12 +57,13 @@ export const createMaintenance = async (req, res) => {
         res.status(500).json({ error: 'Failed to create maintenance' });
     }
 };
-export const updateMaintenance = async (req, res) => {
+exports.createMaintenance = createMaintenance;
+const updateMaintenance = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const id = req.params.id;
         const { vehicleId, type, cost, description, date, status } = req.body;
-        await prisma.maintenance.updateMany({
+        await prisma_1.default.maintenance.updateMany({
             where: { id, tenantId },
             data: {
                 vehicleId,
@@ -66,21 +74,23 @@ export const updateMaintenance = async (req, res) => {
                 date: date ? new Date(date) : undefined,
             },
         });
-        const maintenance = await prisma.maintenance.findFirst({ where: { id, tenantId } });
+        const maintenance = await prisma_1.default.maintenance.findFirst({ where: { id, tenantId } });
         res.json(maintenance);
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to update maintenance' });
     }
 };
-export const deleteMaintenance = async (req, res) => {
+exports.updateMaintenance = updateMaintenance;
+const deleteMaintenance = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const id = req.params.id;
-        await prisma.maintenance.deleteMany({ where: { id, tenantId } });
+        await prisma_1.default.maintenance.deleteMany({ where: { id, tenantId } });
         res.json({ message: 'Deleted successfully' });
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to delete maintenance' });
     }
 };
+exports.deleteMaintenance = deleteMaintenance;

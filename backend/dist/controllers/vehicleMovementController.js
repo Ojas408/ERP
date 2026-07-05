@@ -1,8 +1,14 @@
-import prisma from '../lib/prisma';
-export const getVehicleMovements = async (req, res) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deleteVehicleMovement = exports.updateVehicleMovement = exports.createVehicleMovement = exports.getVehicleMovements = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const getVehicleMovements = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const movements = await prisma.vehicleMovement.findMany({
+        const movements = await prisma_1.default.vehicleMovement.findMany({
             where: { tenantId },
             include: { vehicle: true },
             orderBy: { startTime: 'desc' },
@@ -13,11 +19,12 @@ export const getVehicleMovements = async (req, res) => {
         res.status(500).json({ message: 'Error fetching vehicle movements' });
     }
 };
-export const createVehicleMovement = async (req, res) => {
+exports.getVehicleMovements = getVehicleMovements;
+const createVehicleMovement = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { vehicleId, fromLocation, toLocation, startTime, endTime, distance, fuelConsumed } = req.body;
     try {
-        const movement = await prisma.vehicleMovement.create({
+        const movement = await prisma_1.default.vehicleMovement.create({
             data: {
                 tenantId,
                 vehicleId,
@@ -35,12 +42,13 @@ export const createVehicleMovement = async (req, res) => {
         res.status(500).json({ message: 'Error creating vehicle movement' });
     }
 };
-export const updateVehicleMovement = async (req, res) => {
+exports.createVehicleMovement = createVehicleMovement;
+const updateVehicleMovement = async (req, res) => {
     const tenantId = req.user.tenantId;
     const id = req.params.id;
     const { vehicleId, fromLocation, toLocation, startTime, endTime, distance, fuelConsumed } = req.body;
     try {
-        await prisma.vehicleMovement.updateMany({
+        await prisma_1.default.vehicleMovement.updateMany({
             where: { id, tenantId },
             data: {
                 vehicleId,
@@ -52,21 +60,23 @@ export const updateVehicleMovement = async (req, res) => {
                 fuelConsumed: fuelConsumed !== undefined ? parseFloat(fuelConsumed) : undefined,
             },
         });
-        const movement = await prisma.vehicleMovement.findFirst({ where: { id, tenantId } });
+        const movement = await prisma_1.default.vehicleMovement.findFirst({ where: { id, tenantId } });
         res.json(movement);
     }
     catch (error) {
         res.status(500).json({ message: 'Error updating vehicle movement' });
     }
 };
-export const deleteVehicleMovement = async (req, res) => {
+exports.updateVehicleMovement = updateVehicleMovement;
+const deleteVehicleMovement = async (req, res) => {
     const tenantId = req.user.tenantId;
     const id = req.params.id;
     try {
-        await prisma.vehicleMovement.deleteMany({ where: { id, tenantId } });
+        await prisma_1.default.vehicleMovement.deleteMany({ where: { id, tenantId } });
         res.json({ message: 'Vehicle movement deleted successfully' });
     }
     catch (error) {
         res.status(500).json({ message: 'Error deleting vehicle movement' });
     }
 };
+exports.deleteVehicleMovement = deleteVehicleMovement;

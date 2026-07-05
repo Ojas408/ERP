@@ -1,9 +1,15 @@
-import prisma from '../lib/prisma';
-import { logActivity } from '../utils/audit';
-export const getMaterialInwards = async (req, res) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deleteMaterialInward = exports.updateMaterialInward = exports.createMaterialInward = exports.getMaterialInwards = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const audit_1 = require("../utils/audit");
+const getMaterialInwards = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const inwards = await prisma.materialInward.findMany({
+        const inwards = await prisma_1.default.materialInward.findMany({
             where: { tenantId },
             include: { site: true },
             orderBy: { date: 'desc' },
@@ -14,13 +20,14 @@ export const getMaterialInwards = async (req, res) => {
         res.status(500).json({ message: 'Error fetching material inward records' });
     }
 };
-export const createMaterialInward = async (req, res) => {
+exports.getMaterialInwards = getMaterialInwards;
+const createMaterialInward = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const data = req.body;
     try {
         if (Array.isArray(data)) {
-            const inwards = await prisma.$transaction(data.map(item => prisma.materialInward.create({
+            const inwards = await prisma_1.default.$transaction(data.map(item => prisma_1.default.materialInward.create({
                 data: {
                     tenantId,
                     inwardNumber: item.inwardNumber,
@@ -36,11 +43,11 @@ export const createMaterialInward = async (req, res) => {
                     remarks: item.remarks,
                 }
             })));
-            await logActivity(userId, email, tenantId, 'BULK_CREATE', 'MaterialInward', `Imported ${inwards.length} inward logs`);
+            await (0, audit_1.logActivity)(userId, email, tenantId, 'BULK_CREATE', 'MaterialInward', `Imported ${inwards.length} inward logs`);
             res.status(201).json(inwards);
         }
         else {
-            const inward = await prisma.materialInward.create({
+            const inward = await prisma_1.default.materialInward.create({
                 data: {
                     tenantId,
                     inwardNumber: data.inwardNumber,
@@ -56,7 +63,7 @@ export const createMaterialInward = async (req, res) => {
                     remarks: data.remarks,
                 },
             });
-            await logActivity(userId, email, tenantId, 'CREATE', 'MaterialInward', `Created inward log: ${inward.inwardNumber}`);
+            await (0, audit_1.logActivity)(userId, email, tenantId, 'CREATE', 'MaterialInward', `Created inward log: ${inward.inwardNumber}`);
             res.status(201).json(inward);
         }
     }
@@ -65,13 +72,14 @@ export const createMaterialInward = async (req, res) => {
         res.status(500).json({ message: 'Error creating material inward log' });
     }
 };
-export const updateMaterialInward = async (req, res) => {
+exports.createMaterialInward = createMaterialInward;
+const updateMaterialInward = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const id = req.params.id;
     const { inwardNumber, date, materialName, quantity, unit, supplierName, vehicleNumber, challanNumber, siteId, receivedBy, remarks } = req.body;
     try {
-        await prisma.materialInward.updateMany({
+        await prisma_1.default.materialInward.updateMany({
             where: { id, tenantId },
             data: {
                 inwardNumber,
@@ -87,24 +95,26 @@ export const updateMaterialInward = async (req, res) => {
                 remarks,
             },
         });
-        const inward = await prisma.materialInward.findFirst({ where: { id, tenantId } });
-        await logActivity(userId, email, tenantId, 'UPDATE', 'MaterialInward', `Updated inward ID: ${id}`);
+        const inward = await prisma_1.default.materialInward.findFirst({ where: { id, tenantId } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'UPDATE', 'MaterialInward', `Updated inward ID: ${id}`);
         res.json(inward);
     }
     catch (error) {
         res.status(500).json({ message: 'Error updating material inward log' });
     }
 };
-export const deleteMaterialInward = async (req, res) => {
+exports.updateMaterialInward = updateMaterialInward;
+const deleteMaterialInward = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const id = req.params.id;
     try {
-        await prisma.materialInward.deleteMany({ where: { id, tenantId } });
-        await logActivity(userId, email, tenantId, 'DELETE', 'MaterialInward', `Deleted inward ID: ${id}`);
+        await prisma_1.default.materialInward.deleteMany({ where: { id, tenantId } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'DELETE', 'MaterialInward', `Deleted inward ID: ${id}`);
         res.json({ message: 'Material inward log deleted successfully' });
     }
     catch (error) {
         res.status(500).json({ message: 'Error deleting material inward log' });
     }
 };
+exports.deleteMaterialInward = deleteMaterialInward;

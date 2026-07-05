@@ -1,6 +1,12 @@
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
-import prisma from '../lib/prisma';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.register = exports.login = void 0;
+const bcryptjs_1 = __importDefault(require("bcryptjs"));
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const prisma_1 = __importDefault(require("../lib/prisma"));
 const JWT_SECRET = process.env.JWT_SECRET;
 if (!JWT_SECRET) {
     if (process.env.NODE_ENV === 'production') {
@@ -9,18 +15,18 @@ if (!JWT_SECRET) {
     console.warn('WARNING: Using default JWT_SECRET for development');
 }
 const SECRET = JWT_SECRET || 'your_secret_key';
-export const login = async (req, res) => {
+const login = async (req, res) => {
     const { email, password } = req.body;
     try {
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma_1.default.user.findUnique({ where: { email } });
         if (!user) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
-        const isPasswordValid = await bcrypt.compare(password, user.password);
+        const isPasswordValid = await bcryptjs_1.default.compare(password, user.password);
         if (!isPasswordValid) {
             return res.status(401).json({ message: 'Invalid credentials' });
         }
-        const token = jwt.sign({ userId: user.id, email: user.email, role: user.role, tenantId: user.tenantId }, SECRET, { expiresIn: '24h' });
+        const token = jsonwebtoken_1.default.sign({ userId: user.id, email: user.email, role: user.role, tenantId: user.tenantId }, SECRET, { expiresIn: '24h' });
         res.json({
             token,
             user: {
@@ -37,16 +43,17 @@ export const login = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
-export const register = async (req, res) => {
+exports.login = login;
+const register = async (req, res) => {
     const { email, password, name, role } = req.body;
     try {
-        const existingUser = await prisma.user.findUnique({ where: { email } });
+        const existingUser = await prisma_1.default.user.findUnique({ where: { email } });
         if (existingUser) {
             return res.status(400).json({ message: 'User already exists' });
         }
-        const hashedPassword = await bcrypt.hash(password, 10);
+        const hashedPassword = await bcryptjs_1.default.hash(password, 10);
         const tenantName = req.body.companyName || `${name}'s Company`;
-        const user = await prisma.user.create({
+        const user = await prisma_1.default.user.create({
             data: {
                 email,
                 password: hashedPassword,
@@ -77,3 +84,4 @@ export const register = async (req, res) => {
         res.status(500).json({ message: 'Server error' });
     }
 };
+exports.register = register;

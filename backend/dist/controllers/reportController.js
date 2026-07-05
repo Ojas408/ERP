@@ -1,4 +1,10 @@
-import prisma from '../lib/prisma';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getSettingsReport = exports.getMaintenanceOverviewReport = exports.getTimeMotionReport = exports.getTargetReport = exports.getEfficiencyReport = exports.getAccountsReport = exports.getBusinessReport = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
 const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6'];
 const productionRate = 1200;
 const monthName = (date) => date.toLocaleString('en-US', { month: 'short' });
@@ -16,16 +22,16 @@ const durationHours = (start, end) => {
     const endTime = end ? end.getTime() : Date.now();
     return Math.max(0, (endTime - start.getTime()) / 36e5);
 };
-export const getBusinessReport = async (req, res) => {
+const getBusinessReport = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const [productions, expenses, purchaseOrders, vehicles, maintenances, employees] = await Promise.all([
-            prisma.production.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
-            prisma.expense.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
-            prisma.purchaseOrder.findMany({ where: { tenantId }, include: { vendor: true }, orderBy: { date: 'asc' } }),
-            prisma.vehicle.findMany({ where: { tenantId } }),
-            prisma.maintenance.findMany({ where: { tenantId } }),
-            prisma.employee.findMany({ where: { tenantId } }),
+            prisma_1.default.production.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
+            prisma_1.default.expense.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
+            prisma_1.default.purchaseOrder.findMany({ where: { tenantId }, include: { vendor: true }, orderBy: { date: 'asc' } }),
+            prisma_1.default.vehicle.findMany({ where: { tenantId } }),
+            prisma_1.default.maintenance.findMany({ where: { tenantId } }),
+            prisma_1.default.employee.findMany({ where: { tenantId } }),
         ]);
         const monthKeys = new Set();
         productions.forEach((item) => monthKeys.add(monthName(item.date)));
@@ -100,14 +106,15 @@ export const getBusinessReport = async (req, res) => {
         res.status(500).json({ message: 'Error building business report' });
     }
 };
-export const getAccountsReport = async (req, res) => {
+exports.getBusinessReport = getBusinessReport;
+const getAccountsReport = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const [productions, expenses, purchaseOrders, vendors] = await Promise.all([
-            prisma.production.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
-            prisma.expense.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
-            prisma.purchaseOrder.findMany({ where: { tenantId }, include: { vendor: true }, orderBy: { date: 'asc' } }),
-            prisma.vendor.findMany({ where: { tenantId } }),
+            prisma_1.default.production.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
+            prisma_1.default.expense.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
+            prisma_1.default.purchaseOrder.findMany({ where: { tenantId }, include: { vendor: true }, orderBy: { date: 'asc' } }),
+            prisma_1.default.vendor.findMany({ where: { tenantId } }),
         ]);
         const productionRevenue = sum(productions.map((item) => item.amount * productionRate));
         const expenseByCategory = Array.from(expenses.reduce((map, item) => map.set(item.category, (map.get(item.category) || 0) + item.amount), new Map()), ([category, amount]) => ({ category, amount }));
@@ -171,15 +178,16 @@ export const getAccountsReport = async (req, res) => {
         res.status(500).json({ message: 'Error building accounts report' });
     }
 };
-export const getEfficiencyReport = async (req, res) => {
+exports.getAccountsReport = getAccountsReport;
+const getEfficiencyReport = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const [productions, vehicles, maintenances, attendances, movements] = await Promise.all([
-            prisma.production.findMany({ where: { tenantId } }),
-            prisma.vehicle.findMany({ where: { tenantId } }),
-            prisma.maintenance.findMany({ where: { tenantId }, include: { vehicle: true } }),
-            prisma.attendance.findMany({ where: { tenantId } }),
-            prisma.vehicleMovement.findMany({ where: { tenantId }, include: { vehicle: true } }),
+            prisma_1.default.production.findMany({ where: { tenantId } }),
+            prisma_1.default.vehicle.findMany({ where: { tenantId } }),
+            prisma_1.default.maintenance.findMany({ where: { tenantId }, include: { vehicle: true } }),
+            prisma_1.default.attendance.findMany({ where: { tenantId } }),
+            prisma_1.default.vehicleMovement.findMany({ where: { tenantId }, include: { vehicle: true } }),
         ]);
         const productionTarget = Math.max(500, productions.length * 500);
         const machine = Math.min(100, Math.round(percent(sum(productions.map((item) => item.amount)), productionTarget)));
@@ -256,14 +264,15 @@ export const getEfficiencyReport = async (req, res) => {
         res.status(500).json({ message: 'Error building efficiency report' });
     }
 };
-export const getTargetReport = async (req, res) => {
+exports.getEfficiencyReport = getEfficiencyReport;
+const getTargetReport = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const [productions, expenses, maintenances, movements] = await Promise.all([
-            prisma.production.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
-            prisma.expense.findMany({ where: { tenantId } }),
-            prisma.maintenance.findMany({ where: { tenantId } }),
-            prisma.vehicleMovement.findMany({ where: { tenantId } }),
+            prisma_1.default.production.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
+            prisma_1.default.expense.findMany({ where: { tenantId } }),
+            prisma_1.default.maintenance.findMany({ where: { tenantId } }),
+            prisma_1.default.vehicleMovement.findMany({ where: { tenantId } }),
         ]);
         const monthlyTargets = Array.from(productions.reduce((map, item) => {
             const key = fullMonthName(item.date);
@@ -305,12 +314,13 @@ export const getTargetReport = async (req, res) => {
         res.status(500).json({ message: 'Error building target report' });
     }
 };
-export const getTimeMotionReport = async (req, res) => {
+exports.getTargetReport = getTargetReport;
+const getTimeMotionReport = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const [movements, challans] = await Promise.all([
-            prisma.vehicleMovement.findMany({ where: { tenantId }, include: { vehicle: true }, orderBy: { startTime: 'desc' } }),
-            prisma.challan.findMany({ where: { tenantId } }),
+            prisma_1.default.vehicleMovement.findMany({ where: { tenantId }, include: { vehicle: true }, orderBy: { startTime: 'desc' } }),
+            prisma_1.default.challan.findMany({ where: { tenantId } }),
         ]);
         const vehicleTimeData = movements.map((item) => {
             const travelHours = durationHours(item.startTime, item.endTime);
@@ -350,12 +360,13 @@ export const getTimeMotionReport = async (req, res) => {
         res.status(500).json({ message: 'Error building time motion report' });
     }
 };
-export const getMaintenanceOverviewReport = async (req, res) => {
+exports.getTimeMotionReport = getTimeMotionReport;
+const getMaintenanceOverviewReport = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const [vehicles, maintenances] = await Promise.all([
-            prisma.vehicle.findMany({ where: { tenantId } }),
-            prisma.maintenance.findMany({ where: { tenantId }, orderBy: { date: 'desc' } }),
+            prisma_1.default.vehicle.findMany({ where: { tenantId } }),
+            prisma_1.default.maintenance.findMany({ where: { tenantId }, orderBy: { date: 'desc' } }),
         ]);
         const equipmentData = vehicles.map((vehicle) => {
             const latest = maintenances.find((item) => item.vehicleId === vehicle.id);
@@ -375,18 +386,19 @@ export const getMaintenanceOverviewReport = async (req, res) => {
         res.status(500).json({ message: 'Error building maintenance overview' });
     }
 };
-export const getSettingsReport = async (req, res) => {
+exports.getMaintenanceOverviewReport = getMaintenanceOverviewReport;
+const getSettingsReport = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const admin = await prisma.user.findFirst({ where: { tenantId }, orderBy: { createdAt: 'asc' } });
+        const admin = await prisma_1.default.user.findFirst({ where: { tenantId }, orderBy: { createdAt: 'asc' } });
         const counts = await Promise.all([
-            prisma.production.count({ where: { tenantId } }),
-            prisma.inventory.count({ where: { tenantId } }),
-            prisma.expense.count({ where: { tenantId } }),
-            prisma.employee.count({ where: { tenantId } }),
-            prisma.vehicle.count({ where: { tenantId } }),
-            prisma.vendor.count({ where: { tenantId } }),
-            prisma.site.count({ where: { tenantId } }),
+            prisma_1.default.production.count({ where: { tenantId } }),
+            prisma_1.default.inventory.count({ where: { tenantId } }),
+            prisma_1.default.expense.count({ where: { tenantId } }),
+            prisma_1.default.employee.count({ where: { tenantId } }),
+            prisma_1.default.vehicle.count({ where: { tenantId } }),
+            prisma_1.default.vendor.count({ where: { tenantId } }),
+            prisma_1.default.site.count({ where: { tenantId } }),
         ]);
         res.json({
             profile: {
@@ -407,3 +419,4 @@ export const getSettingsReport = async (req, res) => {
         res.status(500).json({ message: 'Error loading settings' });
     }
 };
+exports.getSettingsReport = getSettingsReport;

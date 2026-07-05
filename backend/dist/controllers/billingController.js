@@ -1,9 +1,15 @@
-import Stripe from 'stripe';
-import prisma from '../lib/prisma';
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock', {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.handleStripeWebhook = exports.createCheckoutSession = void 0;
+const stripe_1 = __importDefault(require("stripe"));
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const stripe = new stripe_1.default(process.env.STRIPE_SECRET_KEY || 'sk_test_mock', {
     apiVersion: '2025-01-27.acacia',
 });
-export const createCheckoutSession = async (req, res) => {
+const createCheckoutSession = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const { planName } = req.body; // e.g. "pro" or "enterprise"
@@ -13,7 +19,7 @@ export const createCheckoutSession = async (req, res) => {
             enterprise: 'price_ent_mock',
         };
         const priceId = prices[planName] || prices.pro;
-        const tenant = await prisma.tenant.findUnique({ where: { id: tenantId } });
+        const tenant = await prisma_1.default.tenant.findUnique({ where: { id: tenantId } });
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [
@@ -35,7 +41,8 @@ export const createCheckoutSession = async (req, res) => {
         res.status(500).json({ message: 'Error creating checkout session' });
     }
 };
-export const handleStripeWebhook = async (req, res) => {
+exports.createCheckoutSession = createCheckoutSession;
+const handleStripeWebhook = async (req, res) => {
     const sig = req.headers['stripe-signature'];
     const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_mock';
     let event;
@@ -56,7 +63,7 @@ export const handleStripeWebhook = async (req, res) => {
         const tenantId = session.client_reference_id;
         const customerId = session.customer;
         if (tenantId) {
-            await prisma.tenant.update({
+            await prisma_1.default.tenant.update({
                 where: { id: tenantId },
                 data: {
                     stripeCustomerId: customerId,
@@ -67,3 +74,4 @@ export const handleStripeWebhook = async (req, res) => {
     }
     res.json({ received: true });
 };
+exports.handleStripeWebhook = handleStripeWebhook;

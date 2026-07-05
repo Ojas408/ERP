@@ -1,22 +1,29 @@
-import prisma from '../lib/prisma';
-import { logActivity } from '../utils/audit';
-export const getInventory = async (req, res) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.updateInventoryItem = exports.deleteInventoryItem = exports.createInventoryItem = exports.getInventory = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const audit_1 = require("../utils/audit");
+const getInventory = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const inventory = await prisma.inventory.findMany({ where: { tenantId } });
+        const inventory = await prisma_1.default.inventory.findMany({ where: { tenantId } });
         res.json(inventory);
     }
     catch (error) {
         res.status(500).json({ message: 'Error fetching inventory' });
     }
 };
-export const createInventoryItem = async (req, res) => {
+exports.getInventory = getInventory;
+const createInventoryItem = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const data = req.body;
     try {
         if (Array.isArray(data)) {
-            const items = await prisma.$transaction(data.map(item => prisma.inventory.create({
+            const items = await prisma_1.default.$transaction(data.map(item => prisma_1.default.inventory.create({
                 data: {
                     tenantId,
                     itemName: item.itemName,
@@ -27,11 +34,11 @@ export const createInventoryItem = async (req, res) => {
                     category: item.category || 'General',
                 }
             })));
-            await logActivity(userId, email, tenantId, 'BULK_CREATE', 'Inventory', `Imported ${items.length} inventory items`);
+            await (0, audit_1.logActivity)(userId, email, tenantId, 'BULK_CREATE', 'Inventory', `Imported ${items.length} inventory items`);
             res.status(201).json(items);
         }
         else {
-            const item = await prisma.inventory.create({
+            const item = await prisma_1.default.inventory.create({
                 data: {
                     tenantId,
                     itemName: data.itemName,
@@ -42,7 +49,7 @@ export const createInventoryItem = async (req, res) => {
                     category: data.category,
                 },
             });
-            await logActivity(userId, email, tenantId, 'CREATE', 'Inventory', `Created inventory item: ${item.itemName}`);
+            await (0, audit_1.logActivity)(userId, email, tenantId, 'CREATE', 'Inventory', `Created inventory item: ${item.itemName}`);
             res.status(201).json(item);
         }
     }
@@ -51,26 +58,28 @@ export const createInventoryItem = async (req, res) => {
         res.status(500).json({ message: 'Error creating inventory item' });
     }
 };
-export const deleteInventoryItem = async (req, res) => {
+exports.createInventoryItem = createInventoryItem;
+const deleteInventoryItem = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const { userId, email } = req.user;
         const id = req.params.id;
-        await prisma.inventory.deleteMany({ where: { id, tenantId } });
-        await logActivity(userId, email, tenantId, 'DELETE', 'Inventory', `Deleted inventory item ID: ${id}`);
+        await prisma_1.default.inventory.deleteMany({ where: { id, tenantId } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'DELETE', 'Inventory', `Deleted inventory item ID: ${id}`);
         res.json({ message: 'Deleted successfully' });
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to delete inventory item' });
     }
 };
-export const updateInventoryItem = async (req, res) => {
+exports.deleteInventoryItem = deleteInventoryItem;
+const updateInventoryItem = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const { userId, email } = req.user;
         const id = req.params.id;
         const { itemName, quantity, unit, minThreshold, price, category } = req.body;
-        await prisma.inventory.updateMany({
+        await prisma_1.default.inventory.updateMany({
             where: { id, tenantId },
             data: {
                 itemName,
@@ -81,11 +90,12 @@ export const updateInventoryItem = async (req, res) => {
                 category,
             },
         });
-        const item = await prisma.inventory.findFirst({ where: { id, tenantId } });
-        await logActivity(userId, email, tenantId, 'UPDATE', 'Inventory', `Updated inventory item ID: ${id}`);
+        const item = await prisma_1.default.inventory.findFirst({ where: { id, tenantId } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'UPDATE', 'Inventory', `Updated inventory item ID: ${id}`);
         res.json(item);
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to update inventory item' });
     }
 };
+exports.updateInventoryItem = updateInventoryItem;

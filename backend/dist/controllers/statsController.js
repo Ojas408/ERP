@@ -1,7 +1,13 @@
-import prisma from '../lib/prisma';
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getDashboardStats = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
 const chartColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14b8a6'];
 const formatChartDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-export const getDashboardStats = async (req, res) => {
+const getDashboardStats = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const todayStart = new Date();
@@ -9,17 +15,17 @@ export const getDashboardStats = async (req, res) => {
         const todayEnd = new Date();
         todayEnd.setHours(23, 59, 59, 999);
         const [totalProduction, activeVehicles, totalExpenses, inventoryCount, productions, consumptions, expenses, pendingChallans, inventoryItems, maintenanceDue, attendanceToday, openExpensesCount,] = await Promise.all([
-            prisma.production.aggregate({ _sum: { amount: true }, where: { tenantId } }),
-            prisma.vehicle.count({ where: { status: 'available', tenantId } }),
-            prisma.expense.aggregate({ _sum: { amount: true }, where: { tenantId } }),
-            prisma.inventory.count({ where: { tenantId } }),
-            prisma.production.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
-            prisma.consumption.findMany({ where: { tenantId } }),
-            prisma.expense.findMany({ where: { tenantId } }),
-            prisma.challan.count({ where: { status: { in: ['pending', 'draft', 'approved', 'dispatched'] }, tenantId } }),
-            prisma.inventory.findMany({ where: { tenantId } }),
-            prisma.maintenance.count({ where: { status: 'pending', tenantId } }),
-            prisma.attendance.count({
+            prisma_1.default.production.aggregate({ _sum: { amount: true }, where: { tenantId } }),
+            prisma_1.default.vehicle.count({ where: { status: 'available', tenantId } }),
+            prisma_1.default.expense.aggregate({ _sum: { amount: true }, where: { tenantId } }),
+            prisma_1.default.inventory.count({ where: { tenantId } }),
+            prisma_1.default.production.findMany({ where: { tenantId }, orderBy: { date: 'asc' } }),
+            prisma_1.default.consumption.findMany({ where: { tenantId } }),
+            prisma_1.default.expense.findMany({ where: { tenantId } }),
+            prisma_1.default.challan.count({ where: { status: { in: ['pending', 'draft', 'approved', 'dispatched'] }, tenantId } }),
+            prisma_1.default.inventory.findMany({ where: { tenantId } }),
+            prisma_1.default.maintenance.count({ where: { status: 'pending', tenantId } }),
+            prisma_1.default.attendance.count({
                 where: {
                     date: {
                         gte: todayStart,
@@ -28,7 +34,7 @@ export const getDashboardStats = async (req, res) => {
                     tenantId
                 }
             }),
-            prisma.expense.count({ where: { paymentStatus: 'pending', tenantId } }),
+            prisma_1.default.expense.count({ where: { paymentStatus: 'pending', tenantId } }),
         ]);
         const lowStockMaterials = inventoryItems.filter(item => item.quantity < item.minThreshold).length;
         const productionTrend = Array.from(productions.reduce((byDate, item) => {
@@ -83,3 +89,4 @@ export const getDashboardStats = async (req, res) => {
         res.status(500).json({ message: 'Error fetching dashboard stats' });
     }
 };
+exports.getDashboardStats = getDashboardStats;

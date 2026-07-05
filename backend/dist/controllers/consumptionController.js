@@ -1,8 +1,14 @@
-import prisma from '../lib/prisma';
-export const getConsumptions = async (req, res) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deleteConsumption = exports.updateConsumption = exports.createConsumption = exports.getConsumptions = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const getConsumptions = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const consumptions = await prisma.consumption.findMany({
+        const consumptions = await prisma_1.default.consumption.findMany({
             where: { tenantId },
             include: { site: true },
             orderBy: { date: 'desc' },
@@ -13,11 +19,12 @@ export const getConsumptions = async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch consumptions' });
     }
 };
-export const createConsumption = async (req, res) => {
+exports.getConsumptions = getConsumptions;
+const createConsumption = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const { material, amount, unit, siteId, date, isRejected, rejectionReason } = req.body;
-        const consumption = await prisma.consumption.create({
+        const consumption = await prisma_1.default.consumption.create({
             data: {
                 tenantId,
                 material,
@@ -35,12 +42,13 @@ export const createConsumption = async (req, res) => {
         res.status(500).json({ error: 'Failed to create consumption' });
     }
 };
-export const updateConsumption = async (req, res) => {
+exports.createConsumption = createConsumption;
+const updateConsumption = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const id = req.params.id;
         const { material, amount, unit, siteId, date, isRejected, rejectionReason } = req.body;
-        await prisma.consumption.updateMany({
+        await prisma_1.default.consumption.updateMany({
             where: { id, tenantId },
             data: {
                 material,
@@ -52,21 +60,23 @@ export const updateConsumption = async (req, res) => {
                 date: date ? new Date(date) : undefined,
             },
         });
-        const consumption = await prisma.consumption.findFirst({ where: { id, tenantId } });
+        const consumption = await prisma_1.default.consumption.findFirst({ where: { id, tenantId } });
         res.json(consumption);
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to update consumption' });
     }
 };
-export const deleteConsumption = async (req, res) => {
+exports.updateConsumption = updateConsumption;
+const deleteConsumption = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const id = req.params.id;
-        await prisma.consumption.deleteMany({ where: { id, tenantId } });
+        await prisma_1.default.consumption.deleteMany({ where: { id, tenantId } });
         res.json({ message: 'Consumption deleted successfully' });
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to delete consumption' });
     }
 };
+exports.deleteConsumption = deleteConsumption;

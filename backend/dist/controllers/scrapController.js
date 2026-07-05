@@ -1,9 +1,15 @@
-import prisma from '../lib/prisma';
-import { logActivity } from '../utils/audit';
-export const getScraps = async (req, res) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deleteScrap = exports.updateScrap = exports.createScrap = exports.getScraps = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const audit_1 = require("../utils/audit");
+const getScraps = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const scraps = await prisma.scrap.findMany({
+        const scraps = await prisma_1.default.scrap.findMany({
             where: { tenantId },
             include: { site: true },
             orderBy: { date: 'desc' },
@@ -14,12 +20,13 @@ export const getScraps = async (req, res) => {
         res.status(500).json({ message: 'Error fetching scrap records' });
     }
 };
-export const createScrap = async (req, res) => {
+exports.getScraps = getScraps;
+const createScrap = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const { date, materialType, quantity, unit, siteId, saleStatus, saleValue, buyerName, remarks } = req.body;
     try {
-        const scrap = await prisma.scrap.create({
+        const scrap = await prisma_1.default.scrap.create({
             data: {
                 tenantId,
                 date: date ? new Date(date) : new Date(),
@@ -33,7 +40,7 @@ export const createScrap = async (req, res) => {
                 remarks: remarks || null,
             },
         });
-        await logActivity(userId, email, tenantId, 'CREATE', 'Scrap', `Created scrap record: ${scrap.materialType} (${scrap.quantity} ${scrap.unit})`);
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'CREATE', 'Scrap', `Created scrap record: ${scrap.materialType} (${scrap.quantity} ${scrap.unit})`);
         res.status(201).json(scrap);
     }
     catch (error) {
@@ -41,13 +48,14 @@ export const createScrap = async (req, res) => {
         res.status(500).json({ message: 'Error creating scrap record' });
     }
 };
-export const updateScrap = async (req, res) => {
+exports.createScrap = createScrap;
+const updateScrap = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const id = req.params.id;
     const { date, materialType, quantity, unit, siteId, saleStatus, saleValue, buyerName, remarks } = req.body;
     try {
-        await prisma.scrap.updateMany({
+        await prisma_1.default.scrap.updateMany({
             where: { id, tenantId },
             data: {
                 date: date ? new Date(date) : undefined,
@@ -61,24 +69,26 @@ export const updateScrap = async (req, res) => {
                 remarks,
             },
         });
-        const scrap = await prisma.scrap.findFirst({ where: { id, tenantId } });
-        await logActivity(userId, email, tenantId, 'UPDATE', 'Scrap', `Updated scrap record ID: ${id}`);
+        const scrap = await prisma_1.default.scrap.findFirst({ where: { id, tenantId } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'UPDATE', 'Scrap', `Updated scrap record ID: ${id}`);
         res.json(scrap);
     }
     catch (error) {
         res.status(500).json({ message: 'Error updating scrap record' });
     }
 };
-export const deleteScrap = async (req, res) => {
+exports.updateScrap = updateScrap;
+const deleteScrap = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const id = req.params.id;
     try {
-        await prisma.scrap.deleteMany({ where: { id, tenantId } });
-        await logActivity(userId, email, tenantId, 'DELETE', 'Scrap', `Deleted scrap record ID: ${id}`);
+        await prisma_1.default.scrap.deleteMany({ where: { id, tenantId } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'DELETE', 'Scrap', `Deleted scrap record ID: ${id}`);
         res.json({ message: 'Scrap record deleted successfully' });
     }
     catch (error) {
         res.status(500).json({ message: 'Error deleting scrap record' });
     }
 };
+exports.deleteScrap = deleteScrap;

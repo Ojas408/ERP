@@ -1,22 +1,29 @@
-import prisma from '../lib/prisma';
-import { logActivity } from '../utils/audit';
-export const getEmployees = async (req, res) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.updateEmployee = exports.deleteEmployee = exports.createEmployee = exports.getEmployees = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const audit_1 = require("../utils/audit");
+const getEmployees = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const employees = await prisma.employee.findMany({ where: { tenantId } });
+        const employees = await prisma_1.default.employee.findMany({ where: { tenantId } });
         res.json(employees);
     }
     catch (error) {
         res.status(500).json({ message: 'Error fetching employees' });
     }
 };
-export const createEmployee = async (req, res) => {
+exports.getEmployees = getEmployees;
+const createEmployee = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const data = req.body;
     try {
         if (Array.isArray(data)) {
-            const employees = await prisma.$transaction(data.map(item => prisma.employee.create({
+            const employees = await prisma_1.default.$transaction(data.map(item => prisma_1.default.employee.create({
                 data: {
                     tenantId,
                     employeeCode: item.employeeCode || undefined,
@@ -30,11 +37,11 @@ export const createEmployee = async (req, res) => {
                     joinedDate: item.joinedDate ? new Date(item.joinedDate) : undefined,
                 }
             })));
-            await logActivity(userId, email, tenantId, 'BULK_CREATE', 'Employee', `Imported ${employees.length} employees`);
+            await (0, audit_1.logActivity)(userId, email, tenantId, 'BULK_CREATE', 'Employee', `Imported ${employees.length} employees`);
             res.status(201).json(employees);
         }
         else {
-            const employee = await prisma.employee.create({
+            const employee = await prisma_1.default.employee.create({
                 data: {
                     tenantId,
                     employeeCode: data.employeeCode || undefined,
@@ -48,7 +55,7 @@ export const createEmployee = async (req, res) => {
                     joinedDate: data.joinedDate ? new Date(data.joinedDate) : undefined,
                 },
             });
-            await logActivity(userId, email, tenantId, 'CREATE', 'Employee', `Created employee: ${employee.name}`);
+            await (0, audit_1.logActivity)(userId, email, tenantId, 'CREATE', 'Employee', `Created employee: ${employee.name}`);
             res.status(201).json(employee);
         }
     }
@@ -57,26 +64,28 @@ export const createEmployee = async (req, res) => {
         res.status(500).json({ message: 'Error creating employee' });
     }
 };
-export const deleteEmployee = async (req, res) => {
+exports.createEmployee = createEmployee;
+const deleteEmployee = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const { userId, email } = req.user;
         const id = req.params.id;
-        await prisma.employee.deleteMany({ where: { id, tenantId } });
-        await logActivity(userId, email, tenantId, 'DELETE', 'Employee', `Deleted employee ID: ${id}`);
+        await prisma_1.default.employee.deleteMany({ where: { id, tenantId } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'DELETE', 'Employee', `Deleted employee ID: ${id}`);
         res.json({ message: 'Deleted successfully' });
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to delete employee' });
     }
 };
-export const updateEmployee = async (req, res) => {
+exports.deleteEmployee = deleteEmployee;
+const updateEmployee = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const { userId, email } = req.user;
         const id = req.params.id;
         const { employeeCode, name, position, department, designation, contact, salary, status, joinedDate } = req.body;
-        await prisma.employee.updateMany({
+        await prisma_1.default.employee.updateMany({
             where: { id, tenantId },
             data: {
                 employeeCode,
@@ -90,11 +99,12 @@ export const updateEmployee = async (req, res) => {
                 joinedDate: joinedDate ? new Date(joinedDate) : undefined,
             },
         });
-        const employee = await prisma.employee.findFirst({ where: { id, tenantId } });
-        await logActivity(userId, email, tenantId, 'UPDATE', 'Employee', `Updated employee ID: ${id}`);
+        const employee = await prisma_1.default.employee.findFirst({ where: { id, tenantId } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'UPDATE', 'Employee', `Updated employee ID: ${id}`);
         res.json(employee);
     }
     catch (error) {
         res.status(500).json({ error: 'Failed to update employee' });
     }
 };
+exports.updateEmployee = updateEmployee;

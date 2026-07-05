@@ -1,9 +1,15 @@
-import prisma from '../lib/prisma';
-import { logActivity } from '../utils/audit';
-export const getOverheadEntries = async (req, res) => {
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.deleteOverheadEntry = exports.updateOverheadEntry = exports.createOverheadEntry = exports.getOverheadSummary = exports.getOverheadEntries = void 0;
+const prisma_1 = __importDefault(require("../lib/prisma"));
+const audit_1 = require("../utils/audit");
+const getOverheadEntries = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const entries = await prisma.overheadEntry.findMany({
+        const entries = await prisma_1.default.overheadEntry.findMany({
             where: { tenantId },
             include: { site: true },
             orderBy: { date: 'desc' },
@@ -14,13 +20,14 @@ export const getOverheadEntries = async (req, res) => {
         res.status(500).json({ message: 'Error fetching overhead entries' });
     }
 };
-export const getOverheadSummary = async (req, res) => {
+exports.getOverheadEntries = getOverheadEntries;
+const getOverheadSummary = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const [entries, expenses, employees] = await Promise.all([
-            prisma.overheadEntry.findMany({ where: { tenantId } }),
-            prisma.expense.findMany({ where: { tenantId } }),
-            prisma.employee.findMany({ where: { tenantId, status: 'active' } }),
+            prisma_1.default.overheadEntry.findMany({ where: { tenantId } }),
+            prisma_1.default.expense.findMany({ where: { tenantId } }),
+            prisma_1.default.employee.findMany({ where: { tenantId, status: 'active' } }),
         ]);
         const categoryTotals = {};
         entries.forEach((entry) => {
@@ -62,12 +69,13 @@ export const getOverheadSummary = async (req, res) => {
         res.status(500).json({ message: 'Error building overhead summary' });
     }
 };
-export const createOverheadEntry = async (req, res) => {
+exports.getOverheadSummary = getOverheadSummary;
+const createOverheadEntry = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const data = req.body;
     try {
-        const entry = await prisma.overheadEntry.create({
+        const entry = await prisma_1.default.overheadEntry.create({
             data: {
                 tenantId,
                 category: data.category,
@@ -80,7 +88,7 @@ export const createOverheadEntry = async (req, res) => {
             },
             include: { site: true },
         });
-        await logActivity(userId, email, tenantId, 'CREATE', 'OverheadEntry', `Created overhead: ${entry.category}`);
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'CREATE', 'OverheadEntry', `Created overhead: ${entry.category}`);
         res.status(201).json(entry);
     }
     catch (error) {
@@ -88,13 +96,14 @@ export const createOverheadEntry = async (req, res) => {
         res.status(500).json({ message: 'Error creating overhead entry' });
     }
 };
-export const updateOverheadEntry = async (req, res) => {
+exports.createOverheadEntry = createOverheadEntry;
+const updateOverheadEntry = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const id = req.params.id;
     const { category, description, quantity, unit, amount, siteId, date } = req.body;
     try {
-        await prisma.overheadEntry.updateMany({
+        await prisma_1.default.overheadEntry.updateMany({
             where: { id, tenantId },
             data: {
                 category,
@@ -106,24 +115,26 @@ export const updateOverheadEntry = async (req, res) => {
                 date: date ? new Date(date) : undefined,
             },
         });
-        const entry = await prisma.overheadEntry.findFirst({ where: { id, tenantId }, include: { site: true } });
-        await logActivity(userId, email, tenantId, 'UPDATE', 'OverheadEntry', `Updated overhead ID: ${id}`);
+        const entry = await prisma_1.default.overheadEntry.findFirst({ where: { id, tenantId }, include: { site: true } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'UPDATE', 'OverheadEntry', `Updated overhead ID: ${id}`);
         res.json(entry);
     }
     catch (error) {
         res.status(500).json({ message: 'Error updating overhead entry' });
     }
 };
-export const deleteOverheadEntry = async (req, res) => {
+exports.updateOverheadEntry = updateOverheadEntry;
+const deleteOverheadEntry = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const id = req.params.id;
     try {
-        await prisma.overheadEntry.deleteMany({ where: { id, tenantId } });
-        await logActivity(userId, email, tenantId, 'DELETE', 'OverheadEntry', `Deleted overhead ID: ${id}`);
+        await prisma_1.default.overheadEntry.deleteMany({ where: { id, tenantId } });
+        await (0, audit_1.logActivity)(userId, email, tenantId, 'DELETE', 'OverheadEntry', `Deleted overhead ID: ${id}`);
         res.json({ message: 'Deleted successfully' });
     }
     catch (error) {
         res.status(500).json({ message: 'Error deleting overhead entry' });
     }
 };
+exports.deleteOverheadEntry = deleteOverheadEntry;
