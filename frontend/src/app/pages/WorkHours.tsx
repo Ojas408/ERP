@@ -14,6 +14,8 @@ import {
   Plus, 
   Printer, 
   RefreshCw, 
+  Edit,
+  Trash2,
   Search, 
   Calendar,
   ChevronLeft,
@@ -21,7 +23,7 @@ import {
   CheckCircle,
   FileSpreadsheet
 } from "lucide-react"
-import { fetchAttendances, createAttendance, fetchEmployees } from "../services/api"
+import { fetchAttendances, createAttendance, fetchEmployees, updateRecord, deleteRecord } from "../services/api"
 import {
   Dialog,
   DialogContent,
@@ -55,6 +57,8 @@ export default function WorkHours() {
   // Dialog Controls
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isBulkMarkOpen, setIsBulkMarkOpen] = useState(false)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<any>(null)
 
   // Single Mark Form State
   const [newAtt, setNewAtt] = useState({
@@ -122,6 +126,45 @@ export default function WorkHours() {
       loadData()
     } catch (error) {
       toast.error("Failed to mark attendance")
+    }
+  }
+
+  const handleEdit = (item: any) => {
+    setEditingItem({
+      ...item,
+      hoursWorked: String(item.hoursWorked || 8),
+      overtime: String(item.overtime || 0),
+      date: new Date(item.date).toISOString().split('T')[0]
+    })
+    setIsEditOpen(true)
+  }
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingItem) return
+    try {
+      await updateRecord('attendance', editingItem.id, {
+        ...editingItem,
+        hoursWorked: parseFloat(editingItem.hoursWorked),
+        overtime: parseFloat(editingItem.overtime)
+      })
+      toast.success("Attendance updated successfully")
+      setIsEditOpen(false)
+      setEditingItem(null)
+      loadData()
+    } catch (error) {
+      toast.error("Failed to update attendance")
+    }
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this record?")) return
+    try {
+      await deleteRecord('attendance', id)
+      toast.success("Record deleted")
+      loadData()
+    } catch (error) {
+      toast.error("Failed to delete record")
     }
   }
 
@@ -492,18 +535,19 @@ export default function WorkHours() {
                   <TableHead>Hours Logged</TableHead>
                   <TableHead>Overtime</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-xs">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs">
                       Loading attendance registers...
                     </TableCell>
                   </TableRow>
                 ) : paginatedAttendances.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground text-xs">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs">
                       No attendance matching current filters found.
                     </TableCell>
                   </TableRow>
@@ -524,6 +568,16 @@ export default function WorkHours() {
                         >
                           {item.status}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleEdit(item)}>
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDelete(item.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -550,6 +604,48 @@ export default function WorkHours() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Attendance</DialogTitle>
+            <DialogDescription>Update the record</DialogDescription>
+          </DialogHeader>
+          {editingItem && (
+            <form onSubmit={handleUpdate} className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Hours Worked</Label>
+                  <Input type="number" value={editingItem.hoursWorked} onChange={e => setEditingItem({...editingItem, hoursWorked: e.target.value})} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Overtime</Label>
+                  <Input type="number" value={editingItem.overtime} onChange={e => setEditingItem({...editingItem, overtime: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <Label>Status</Label>
+                  <Select value={editingItem.status} onValueChange={v => setEditingItem({...editingItem, status: v})}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="present">Present</SelectItem>
+                      <SelectItem value="absent">Absent</SelectItem>
+                      <SelectItem value="leave">Leave</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Date</Label>
+                  <Input type="date" value={editingItem.date} onChange={e => setEditingItem({...editingItem, date: e.target.value})} required />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
+                <Button type="submit">Update Record</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* SheetJS Import Preview Modal */}
       <ImportPreviewModal

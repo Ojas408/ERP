@@ -14,7 +14,11 @@ import {
   Search, 
   ChevronLeft, 
   ChevronRight,
-  ClipboardList
+  ChevronRight,
+  ClipboardList,
+  Download,
+  Upload,
+  FileSpreadsheet
 } from "lucide-react"
 import { 
   fetchRmcGrades, 
@@ -32,6 +36,8 @@ import {
   DialogFooter,
 } from "../components/ui/dialog"
 import { toast } from "sonner"
+import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
+import { ImportPreviewModal } from "../components/ImportPreviewModal"
 
 export default function RMCGrade() {
   const [grades, setGrades] = useState<any[]>([])
@@ -58,6 +64,10 @@ export default function RMCGrade() {
     admixture: "",
     description: ""
   })
+
+  // SheetJS Import Preview States
+  const [importData, setImportData] = useState<any[]>([])
+  const [isImportOpen, setIsImportOpen] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -141,6 +151,63 @@ export default function RMCGrade() {
     }
   }
 
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(
+      ["grade", "mixRatio", "cementContent", "waterCementRatio", "admixture", "description"],
+      "rmc_grades_template"
+    )
+  }
+
+  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    parseExcelFile(file)
+      .then((data) => {
+        setImportData(data)
+        setIsImportOpen(true)
+      })
+      .catch((err) => {
+        toast.error("Failed to parse excel file")
+      })
+    e.target.value = ""
+  }
+
+  const handleConfirmImport = async (parsedRows: any[]) => {
+    try {
+      const formatted = parsedRows.map(row => ({
+        grade: String(row.grade || ""),
+        mixRatio: String(row.mixRatio || ""),
+        cementContent: row.cementContent ? parseFloat(row.cementContent) : null,
+        waterCementRatio: row.waterCementRatio ? parseFloat(row.waterCementRatio) : null,
+        admixture: String(row.admixture || ""),
+        description: String(row.description || "")
+      }))
+      
+      for (const item of formatted) {
+        if (!item.grade) continue
+        await createRmcGrade(item)
+      }
+      
+      toast.success(`Successfully imported RMC grades`)
+      setIsImportOpen(false)
+      loadData()
+    } catch (err) {
+      toast.error("Import failed.")
+    }
+  }
+
+  const handleExportExcel = () => {
+    const data = grades.map(g => ({
+      Grade: g.grade,
+      MixRatio: g.mixRatio,
+      CementContent: g.cementContent,
+      WaterCementRatio: g.waterCementRatio,
+      Admixtures: g.admixture,
+      Description: g.description
+    }))
+    exportToExcel(data, "rmc_grades_report")
+  }
+
   // Filter calculations
   const filteredGrades = grades.filter(item => {
     const searchLower = searchQuery.toLowerCase()
@@ -174,6 +241,19 @@ export default function RMCGrade() {
           <Button variant="outline" className="text-xs h-9" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleDownloadTemplate}>
+            <Download className="h-4 w-4 mr-2" />
+            Template
+          </Button>
+          <label className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-background text-xs font-semibold px-3 h-9 cursor-pointer hover:bg-muted">
+            <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
+            Import
+            <input type="file" onChange={handleExcelImport} className="hidden" accept=".xlsx,.xls,.csv" />
+          </label>
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleExportExcel}>
+            <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
+            Export
           </Button>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
@@ -368,6 +448,20 @@ export default function RMCGrade() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ImportPreviewModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        data={importData}
+        headers={["grade", "mixRatio", "cementContent", "waterCementRatio", "admixture", "description"]}
+        validationRules={(row, i) => {
+          const errs: string[] = []
+          if (!row.grade) errs.push(`Row ${i + 1}: grade is required`)
+          return errs
+        }}
+        onConfirm={handleConfirmImport}
+        title="Import RMC Grades"
+      />
     </div>
   )
 }

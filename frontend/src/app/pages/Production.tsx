@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
-import { Factory, TrendingUp, Target, Activity, Upload, Download, Plus, Edit, Trash2, Eye, RefreshCw } from "lucide-react"
+import { Factory, TrendingUp, Target, Activity, Upload, Download, Plus, Edit, Trash2, Eye, RefreshCw, FileSpreadsheet } from "lucide-react"
 import { fetchProductions, createProduction, fetchSites, fetchRmcGrades, deleteRecord, updateRecord } from "../services/api"
 import {
   Dialog,
@@ -20,6 +20,8 @@ import {
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
+import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
+import { ImportPreviewModal } from "../components/ImportPreviewModal"
 
 export default function Production() {
   const [productions, setProductions] = useState<any[]>([])
@@ -42,6 +44,10 @@ export default function Production() {
     isRejected: false,
     rejectionReason: ""
   })
+
+  // SheetJS Import Preview States
+  const [importData, setImportData] = useState<any[]>([])
+  const [isImportOpen, setIsImportOpen] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -144,6 +150,70 @@ export default function Production() {
     }
   }
 
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(
+      ["date", "siteId", "amount", "unit", "grade", "productionType", "towerName", "notes", "isRejected", "rejectionReason"],
+      "production_import_template"
+    )
+  }
+
+  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    parseExcelFile(file)
+      .then((data) => {
+        setImportData(data)
+        setIsImportOpen(true)
+      })
+      .catch((err) => {
+        console.error("Failed to parse excel file", err)
+      })
+    e.target.value = ""
+  }
+
+  const handleConfirmImport = async (parsedRows: any[]) => {
+    try {
+      const formatted = parsedRows.map(row => ({
+        siteId: String(row.siteId || ""),
+        date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
+        amount: parseFloat(row.amount) || 0,
+        unit: String(row.unit || "cum"),
+        grade: String(row.grade || ""),
+        quality: String(row.grade || ""),
+        productionType: String(row.productionType || "Transit Mixture"),
+        towerName: String(row.towerName || ""),
+        notes: String(row.notes || ""),
+        isRejected: String(row.isRejected || "false").toLowerCase() === "true",
+        rejectionReason: String(row.rejectionReason || "")
+      }))
+      
+      for (const item of formatted) {
+        await createProduction(item)
+      }
+      
+      setIsImportOpen(false)
+      loadData()
+    } catch (err) {
+      console.error("Import failed.", err)
+    }
+  }
+
+  const handleExportExcel = () => {
+    const data = safeProductions.map(p => ({
+      date: new Date(p.date).toLocaleString(),
+      site: p.site?.name || 'N/A',
+      building: p.towerName || "-",
+      type: p.productionType || "General",
+      quantity: p.amount || 0,
+      unit: p.unit,
+      grade: p.grade || p.quality || "-",
+      status: p.isRejected ? "Rejected" : ((p.amount || 0) >= 500 ? "Target Met" : "Below Target"),
+      rejectionReason: p.rejectionReason || "",
+      notes: p.notes || ""
+    }))
+    exportToExcel(data, "production_report")
+  }
+
   // Defensive calculations
   const safeProductions = Array.isArray(productions) ? productions : []
   const safeSites = Array.isArray(sites) ? sites : []
@@ -190,9 +260,18 @@ export default function Production() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" className="text-xs h-9">
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleDownloadTemplate}>
             <Download className="h-4 w-4 mr-2" />
-            Export CSV
+            Template
+          </Button>
+          <label className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-background text-xs font-semibold px-3 h-9 cursor-pointer hover:bg-muted">
+            <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
+            Import
+            <input type="file" onChange={handleExcelImport} className="hidden" accept=".xlsx,.xls,.csv" />
+          </label>
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleExportExcel}>
+            <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
+            Export
           </Button>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
@@ -615,6 +694,21 @@ export default function Production() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* SheetJS Import Preview Modal */}
+      <ImportPreviewModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        data={importData}
+        headers={["date", "siteId", "amount", "unit", "grade", "productionType", "towerName", "notes", "isRejected", "rejectionReason"]}
+        validationRules={(row, i) => {
+          const errs: string[] = []
+          if (!row.amount || isNaN(parseFloat(row.amount))) errs.push(`Row ${i + 1}: amount must be a number`)
+          return errs
+        }}
+        onConfirm={handleConfirmImport}
+        title="Import Production Records"
+      />
     </div>
   )
 }

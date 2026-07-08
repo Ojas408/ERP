@@ -5,7 +5,7 @@ import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Toolti
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
-import { Wrench, AlertTriangle, Clock, CheckCircle2, Upload, Download, Plus, Eye, Edit, Trash2, RefreshCw, UserCheck } from "lucide-react"
+import { Wrench, AlertTriangle, Clock, CheckCircle2, Upload, Download, Plus, Eye, Edit, Trash2, RefreshCw, UserCheck, FileSpreadsheet } from "lucide-react"
 import { fetchMaintenances, createMaintenance, fetchVehicles, fetchEmployees, deleteRecord, updateRecord } from "../services/api"
 import {
   Dialog,
@@ -19,6 +19,8 @@ import {
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
+import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
+import { ImportPreviewModal } from "../components/ImportPreviewModal"
 
 export default function Maintenance() {
   const [maintenances, setMaintenances] = useState<any[]>([])
@@ -37,6 +39,10 @@ export default function Maintenance() {
     status: "completed",
     date: new Date().toISOString().split('T')[0]
   })
+
+  // SheetJS Import Preview States
+  const [importData, setImportData] = useState<any[]>([])
+  const [isImportOpen, setIsImportOpen] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -117,6 +123,63 @@ export default function Maintenance() {
     }
   }
 
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(
+      ["vehicleId", "employeeId", "type", "cost", "description", "status", "date"],
+      "maintenance_import_template"
+    )
+  }
+
+  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    parseExcelFile(file)
+      .then((data) => {
+        setImportData(data)
+        setIsImportOpen(true)
+      })
+      .catch((err) => {
+        console.error("Failed to parse excel file", err)
+      })
+    e.target.value = ""
+  }
+
+  const handleConfirmImport = async (parsedRows: any[]) => {
+    try {
+      const formatted = parsedRows.map(row => ({
+        vehicleId: String(row.vehicleId || ""),
+        employeeId: String(row.employeeId || ""),
+        type: String(row.type || "Routine"),
+        cost: parseFloat(row.cost) || 0,
+        description: String(row.description || ""),
+        status: String(row.status || "pending"),
+        date: row.date ? new Date(row.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+      }))
+      
+      for (const item of formatted) {
+        await createMaintenance(item)
+      }
+      
+      setIsImportOpen(false)
+      loadData()
+    } catch (err) {
+      console.error("Import failed.", err)
+    }
+  }
+
+  const handleExportExcel = () => {
+    const data = safeMaintenances.map(m => ({
+      Date: new Date(m.date).toLocaleDateString(),
+      Vehicle: m.vehicle?.plateNumber || 'N/A',
+      Type: m.type,
+      AssignedTo: safeEmployees.find(e => e.id === m.employeeId)?.name || 'Unassigned',
+      Cost: m.cost,
+      Status: m.status,
+      Description: m.description
+    }))
+    exportToExcel(data, "maintenance_report")
+  }
+
   const safeMaintenances = Array.isArray(maintenances) ? maintenances : []
   const safeVehicles = Array.isArray(vehicles) ? vehicles : []
   const safeEmployees = Array.isArray(employees) ? employees : []
@@ -138,9 +201,18 @@ export default function Maintenance() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" className="text-xs h-9">
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleDownloadTemplate}>
             <Download className="h-4 w-4 mr-2" />
-            Export CSV
+            Template
+          </Button>
+          <label className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-background text-xs font-semibold px-3 h-9 cursor-pointer hover:bg-muted">
+            <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
+            Import
+            <input type="file" onChange={handleExcelImport} className="hidden" accept=".xlsx,.xls,.csv" />
+          </label>
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleExportExcel}>
+            <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
+            Export
           </Button>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
@@ -397,6 +469,20 @@ export default function Maintenance() {
           )}
         </DialogContent>
       </Dialog>
+
+      <ImportPreviewModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        data={importData}
+        headers={["vehicleId", "employeeId", "type", "cost", "description", "status", "date"]}
+        validationRules={(row, i) => {
+          const errs: string[] = []
+          if (isNaN(parseFloat(row.cost))) errs.push(`Row ${i + 1}: cost must be a number`)
+          return errs
+        }}
+        onConfirm={handleConfirmImport}
+        title="Import Work Orders"
+      />
     </div>
   )
 }

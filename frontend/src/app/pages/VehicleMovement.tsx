@@ -4,7 +4,7 @@ import { KPICard } from "../components/dashboard/kpi-card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
-import { Truck, TruckIcon, Activity, Clock, Upload, Download, Plus, Edit, Trash2, RefreshCw, MapPin } from "lucide-react"
+import { Truck, TruckIcon, Activity, Clock, Upload, Download, Plus, Edit, Trash2, RefreshCw, MapPin, FileSpreadsheet } from "lucide-react"
 import { fetchVehicles, createVehicle, fetchVehicleMovements, createVehicleMovement, deleteRecord, updateRecord } from "../services/api"
 import {
   Dialog,
@@ -19,6 +19,8 @@ import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
+import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
+import { ImportPreviewModal } from "../components/ImportPreviewModal"
 
 export default function VehicleMovement() {
   const [vehicles, setVehicles] = useState<any[]>([])
@@ -40,6 +42,10 @@ export default function VehicleMovement() {
     distance: "",
     fuelConsumed: ""
   })
+
+  // SheetJS Import Preview States
+  const [importData, setImportData] = useState<any[]>([])
+  const [isImportOpen, setIsImportOpen] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -93,6 +99,56 @@ export default function VehicleMovement() {
     }
   }
 
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(
+      ["plateNumber", "model", "status"],
+      "vehicles_import_template"
+    )
+  }
+
+  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    parseExcelFile(file)
+      .then((data) => {
+        setImportData(data)
+        setIsImportOpen(true)
+      })
+      .catch((err) => {
+        console.error("Failed to parse excel file", err)
+      })
+    e.target.value = ""
+  }
+
+  const handleConfirmImport = async (parsedRows: any[]) => {
+    try {
+      const formatted = parsedRows.map(row => ({
+        plateNumber: String(row.plateNumber || ""),
+        model: String(row.model || ""),
+        status: String(row.status || "available")
+      }))
+      
+      for (const item of formatted) {
+        if (!item.plateNumber) continue
+        await createVehicle(item)
+      }
+      
+      setIsImportOpen(false)
+      loadData()
+    } catch (err) {
+      console.error("Import failed.", err)
+    }
+  }
+
+  const handleExportExcel = () => {
+    const data = vehicles.map(v => ({
+      PlateNumber: v.plateNumber,
+      Model: v.model,
+      Status: v.status
+    }))
+    exportToExcel(data, "vehicles_report")
+  }
+
   const availableCount = vehicles.filter(v => v.status === "available").length
   const inUseCount = vehicles.filter(v => v.status === "in-use").length
 
@@ -108,7 +164,19 @@ export default function VehicleMovement() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" className="text-xs h-9"><Download className="h-4 w-4 mr-2" />Export CSV</Button>
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleDownloadTemplate}>
+            <Download className="h-4 w-4 mr-2" />
+            Template
+          </Button>
+          <label className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-background text-xs font-semibold px-3 h-9 cursor-pointer hover:bg-muted">
+            <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
+            Import
+            <input type="file" onChange={handleExcelImport} className="hidden" accept=".xlsx,.xls,.csv" />
+          </label>
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleExportExcel}>
+            <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
+            Export
+          </Button>
         </div>
       </div>
 
@@ -247,6 +315,20 @@ export default function VehicleMovement() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <ImportPreviewModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        data={importData}
+        headers={["plateNumber", "model", "status"]}
+        validationRules={(row, i) => {
+          const errs: string[] = []
+          if (!row.plateNumber) errs.push(`Row ${i + 1}: plateNumber is required`)
+          return errs
+        }}
+        onConfirm={handleConfirmImport}
+        title="Import Vehicles"
+      />
     </div>
   )
 }

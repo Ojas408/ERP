@@ -4,7 +4,7 @@ import { KPICard } from "../components/dashboard/kpi-card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
-import { Fuel, Package, Hammer, Mountain, Download, Plus, Edit, Trash2, RefreshCw } from "lucide-react"
+import { Fuel, Package, Hammer, Mountain, Plus, Edit, Trash2, RefreshCw, Download, Upload, FileSpreadsheet } from "lucide-react"
 import { fetchConsumptions, createConsumption, fetchSites, deleteRecord, updateRecord } from "../services/api"
 import {
   Dialog,
@@ -18,6 +18,8 @@ import {
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
+import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
+import { ImportPreviewModal } from "../components/ImportPreviewModal"
 
 export default function Consumption() {
   const [consumptions, setConsumptions] = useState<any[]>([])
@@ -35,6 +37,10 @@ export default function Consumption() {
     isRejected: false,
     rejectionReason: ""
   })
+
+  // SheetJS Import Preview States
+  const [importData, setImportData] = useState<any[]>([])
+  const [isImportOpen, setIsImportOpen] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -122,6 +128,64 @@ export default function Consumption() {
       .reduce((sum, c) => sum + (Number(c.amount) || 0), 0)
   }
 
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(
+      ["date", "material", "amount", "unit", "siteId", "isRejected", "rejectionReason"],
+      "consumption_import_template"
+    )
+  }
+
+  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    parseExcelFile(file)
+      .then((data) => {
+        setImportData(data)
+        setIsImportOpen(true)
+      })
+      .catch((err) => {
+        console.error("Failed to parse excel file", err)
+      })
+    e.target.value = ""
+  }
+
+  const handleConfirmImport = async (parsedRows: any[]) => {
+    try {
+      const formatted = parsedRows.map(row => ({
+        date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
+        material: String(row.material || "Diesel"),
+        amount: parseFloat(row.amount) || 0,
+        unit: String(row.unit || "Liters"),
+        siteId: String(row.siteId || ""),
+        isRejected: String(row.isRejected || "false").toLowerCase() === "true",
+        rejectionReason: String(row.rejectionReason || "")
+      }))
+      
+      // Loop to create each one
+      for (const item of formatted) {
+        await createConsumption(item)
+      }
+      
+      setIsImportOpen(false)
+      loadData()
+    } catch (err) {
+      console.error("Import failed.", err)
+    }
+  }
+
+  const handleExportExcel = () => {
+    const data = consumptions.map(c => ({
+      date: new Date(c.date).toLocaleDateString(),
+      material: c.material,
+      amount: c.amount,
+      unit: c.unit,
+      site: c.site?.name || 'N/A',
+      status: c.isRejected ? "Wasted / Rejected" : "Consumed",
+      rejectionReason: c.rejectionReason || ""
+    }))
+    exportToExcel(data, "consumption_report")
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -133,6 +197,19 @@ export default function Consumption() {
           <Button variant="outline" className="text-xs h-9" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleDownloadTemplate}>
+            <Download className="h-4 w-4 mr-2" />
+            Template
+          </Button>
+          <label className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-background text-xs font-semibold px-3 h-9 cursor-pointer hover:bg-muted">
+            <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
+            Import
+            <input type="file" onChange={handleExcelImport} className="hidden" accept=".xlsx,.xls,.csv" />
+          </label>
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleExportExcel}>
+            <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
+            Export
           </Button>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
@@ -301,6 +378,22 @@ export default function Consumption() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* SheetJS Import Preview Modal */}
+      <ImportPreviewModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
+        data={importData}
+        headers={["date", "material", "amount", "unit", "siteId", "isRejected", "rejectionReason"]}
+        validationRules={(row, i) => {
+          const errs: string[] = []
+          if (!row.material) errs.push(`Row ${i + 1}: material is required`)
+          if (!row.amount || isNaN(parseFloat(row.amount))) errs.push(`Row ${i + 1}: amount must be a number`)
+          return errs
+        }}
+        onConfirm={handleConfirmImport}
+        title="Import Consumption Records"
+      />
     </div>
   )
 }

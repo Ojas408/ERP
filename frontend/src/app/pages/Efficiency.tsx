@@ -8,6 +8,8 @@ import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
 import { Gauge, TrendingUp, Activity, Zap, Upload, Download, Eye, Edit, Trash2 } from "lucide-react"
 import { fetchEfficiencyReport } from "../services/api"
+import { exportToExcel } from "../lib/excel-helper"
+import { FileSpreadsheet } from "lucide-react"
 
 const overallEfficiency = [
   { id: "oe1", category: "Machine", value: 87, fill: "#3b82f6" },
@@ -59,6 +61,17 @@ export default function Efficiency() {
     downtimeHours: 34,
   }
 
+  const handleExportExcel = () => {
+    const data = currentEquipmentEfficiency.map((item: any) => ({
+      Equipment: item.equipment,
+      Uptime: `${item.uptime}%`,
+      Utilization: `${item.utilization}%`,
+      Efficiency: `${item.efficiency}%`,
+      Status: item.status
+    }))
+    exportToExcel(data, "efficiency_equipment_report")
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -73,8 +86,8 @@ export default function Efficiency() {
             <Upload className="h-4 w-4 mr-2" />
             Import CSV
           </Button>
-          <Button variant="outline" className="text-xs h-9">
-            <Download className="h-4 w-4 mr-2" />
+          <Button variant="outline" className="text-xs h-9" onClick={handleExportExcel}>
+            <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
             Export Report
           </Button>
         </div>
