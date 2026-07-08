@@ -72,62 +72,7 @@ export function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Date Range Selector */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 hidden lg:flex">
-                <Calendar className="h-4 w-4" />
-                <span className="text-xs">{formatDateRange(dateRange.from, dateRange.to)}</span>
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Select Date Range</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setDateRange(dateRangePresets.today())}>
-                Today
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDateRange(dateRangePresets.yesterday())}>
-                Yesterday
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDateRange(dateRangePresets.last7Days())}>
-                Last 7 Days
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDateRange(dateRangePresets.thisMonth())}>
-                This Month
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setDateRange(dateRangePresets.lastMonth())}>
-                Last Month
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem>
-                Custom Range...
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
 
-          {/* Site Selector */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2 hidden lg:flex">
-                <MapPin className="h-4 w-4" />
-                <span className="text-xs max-w-[140px] truncate">{selectedSiteName}</span>
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel>Select Site</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setSelectedSiteId("all")}>
-                All Sites
-              </DropdownMenuItem>
-              {sites.map((site) => (
-                <DropdownMenuItem key={site.id} onClick={() => setSelectedSiteId(site.id)}>
-                  {site.name}{site.location ? ` — ${site.location}` : ""}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
 
           {/* Theme Toggle */}
           <Button
