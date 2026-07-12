@@ -38,6 +38,7 @@ export const createProduction = async (req: AuthRequest, res: Response) => {
             isRejected: item.isRejected === true || item.isRejected === 'true',
             rejectionReason: item.rejectionReason || null,
             date: item.date ? new Date(item.date) : new Date(),
+            customData: item.customData || undefined,
           }
         }))
       );
@@ -58,6 +59,7 @@ export const createProduction = async (req: AuthRequest, res: Response) => {
           isRejected: data.isRejected === true || data.isRejected === 'true',
           rejectionReason: data.rejectionReason || null,
           date: data.date ? new Date(data.date) : undefined,
+          customData: data.customData || undefined,
         },
       });
       await logActivity(userId, email, tenantId, 'CREATE', 'Production', `Created production log amount: ${production.amount}`);
@@ -102,6 +104,7 @@ export const updateProduction = async (req: AuthRequest, res: Response) => {
         isRejected: isRejected !== undefined ? (isRejected === true || isRejected === 'true') : undefined,
         rejectionReason,
         date: date ? new Date(date) : undefined,
+        customData: req.body.customData !== undefined ? req.body.customData : undefined,
       },
     });
     

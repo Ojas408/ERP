@@ -6,8 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
-import { Factory, TrendingUp, Target, Activity, Upload, Download, Plus, Edit, Trash2, Eye, RefreshCw, FileSpreadsheet } from "lucide-react"
-import { fetchProductions, createProduction, fetchSites, fetchRmcGrades, deleteRecord, updateRecord } from "../services/api"
+import { Factory, TrendingUp, Target, Activity, Upload, Download, Plus, Edit, Trash2, Eye, RefreshCw, FileSpreadsheet, Settings2 } from "lucide-react"
+import { fetchProductions, createProduction, fetchSites, fetchRmcGrades, deleteRecord, updateRecord, fetchCustomColumns } from "../services/api"
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
+import { ManageColumnsModal } from "../components/ManageColumnsModal"
 
 export default function Production() {
   const [productions, setProductions] = useState<any[]>([])
@@ -42,12 +43,15 @@ export default function Production() {
     quality: "",
     towerName: "",
     isRejected: false,
-    rejectionReason: ""
+    rejectionReason: "",
+    customData: {} as Record<string, any>
   })
 
   // SheetJS Import Preview States
   const [importData, setImportData] = useState<any[]>([])
   const [isImportOpen, setIsImportOpen] = useState(false)
+  const [customCols, setCustomCols] = useState<any[]>([])
+  const [isManageColsOpen, setIsManageColsOpen] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -56,14 +60,16 @@ export default function Production() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [prodData, siteData, gradeData] = await Promise.all([
+      const [prodData, siteData, gradeData, colsData] = await Promise.all([
         fetchProductions(),
         fetchSites(),
-        fetchRmcGrades()
+        fetchRmcGrades(),
+        fetchCustomColumns("Production")
       ])
       setProductions(Array.isArray(prodData) ? prodData : [])
       setSites(Array.isArray(siteData) ? siteData : [])
       setRmcGrades(Array.isArray(gradeData) ? gradeData : [])
+      setCustomCols(Array.isArray(colsData) ? colsData : [])
     } catch (error) {
       console.error("Failed to load production data:", error)
     } finally {
@@ -110,7 +116,8 @@ export default function Production() {
       quality: item.quality || "",
       towerName: item.towerName || "",
       isRejected: item.isRejected || false,
-      rejectionReason: item.rejectionReason || ""
+      rejectionReason: item.rejectionReason || "",
+      customData: item.customData || {}
     })
     setIsEditOpen(true)
   }
@@ -130,7 +137,8 @@ export default function Production() {
         productionType: editingItem.productionType,
         towerName: editingItem.towerName,
         isRejected: editingItem.isRejected,
-        rejectionReason: editingItem.rejectionReason
+        rejectionReason: editingItem.rejectionReason,
+        customData: editingItem.customData
       })
       setIsEditOpen(false)
       setEditingItem(null)
@@ -152,7 +160,7 @@ export default function Production() {
 
   const handleDownloadTemplate = () => {
     downloadExcelTemplate(
-      ["date", "siteId", "amount", "unit", "grade", "productionType", "towerName", "notes", "isRejected", "rejectionReason"],
+      ["date", "siteId", "amount", "unit", "grade", "productionType", "towerName", "notes", "isRejected", "rejectionReason", ...customCols.map(c => c.key)],
       "production_import_template"
     )
   }
@@ -184,7 +192,8 @@ export default function Production() {
         towerName: String(row.towerName || ""),
         notes: String(row.notes || ""),
         isRejected: String(row.isRejected || "false").toLowerCase() === "true",
-        rejectionReason: String(row.rejectionReason || "")
+        rejectionReason: String(row.rejectionReason || ""),
+        customData: customCols.reduce((acc: any, col: any) => ({ ...acc, [col.key]: row[col.key] }), {})
       }))
       
       for (const item of formatted) {
@@ -209,7 +218,8 @@ export default function Production() {
       grade: p.grade || p.quality || "-",
       status: p.isRejected ? "Rejected" : ((p.amount || 0) >= 500 ? "Target Met" : "Below Target"),
       rejectionReason: p.rejectionReason || "",
-      notes: p.notes || ""
+      notes: p.notes || "",
+      ...(p.customData || {})
     }))
     exportToExcel(data, "production_report")
   }
@@ -259,6 +269,10 @@ export default function Production() {
           <Button variant="outline" className="text-xs h-9" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={() => setIsManageColsOpen(true)}>
+            <Settings2 className="h-4 w-4 mr-2" />
+            Columns
           </Button>
           <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleDownloadTemplate}>
             <Download className="h-4 w-4 mr-2" />
@@ -542,6 +556,9 @@ export default function Production() {
                   <TableHead>Quantity</TableHead>
                   <TableHead>Unit</TableHead>
                   <TableHead>Grade</TableHead>
+                  {customCols.map(c => (
+                    <TableHead key={c.id}>{c.name}</TableHead>
+                  ))}
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -558,6 +575,9 @@ export default function Production() {
                     <TableCell className="text-xs font-semibold">{(item.amount || 0).toLocaleString()}</TableCell>
                     <TableCell className="text-xs font-mono">{item.unit}</TableCell>
                     <TableCell className="text-xs font-medium">{item.grade || item.quality || "-"}</TableCell>
+                    {customCols.map(c => (
+                      <TableCell key={c.id} className="text-xs">{item.customData?.[c.key] || "-"}</TableCell>
+                    ))}
                     <TableCell>
                       {item.isRejected ? (
                         <Badge variant="destructive" className="text-[9px] h-5 uppercase font-bold" title={item.rejectionReason}>
@@ -708,6 +728,12 @@ export default function Production() {
         }}
         onConfirm={handleConfirmImport}
         title="Import Production Records"
+      />
+      <ManageColumnsModal
+        isOpen={isManageColsOpen}
+        onClose={() => setIsManageColsOpen(false)}
+        entityName="Production"
+        onColumnsChange={loadData}
       />
     </div>
   )

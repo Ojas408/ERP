@@ -30,6 +30,7 @@ export const createConsumption = async (req: AuthRequest, res: Response) => {
         isRejected: isRejected === true || isRejected === 'true',
         rejectionReason: rejectionReason || null,
         date: date ? new Date(date) : new Date(),
+        customData: req.body.customData || undefined,
       },
     });
     res.json(consumption);
@@ -53,6 +54,7 @@ export const updateConsumption = async (req: AuthRequest, res: Response) => {
         isRejected: isRejected !== undefined ? (isRejected === true || isRejected === 'true') : undefined,
         rejectionReason,
         date: date ? new Date(date) : undefined,
+        customData: req.body.customData !== undefined ? req.body.customData : undefined,
       },
     });
     const consumption = await prisma.consumption.findFirst({ where: { id, tenantId } });

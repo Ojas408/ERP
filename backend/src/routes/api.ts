@@ -37,6 +37,7 @@ import { authorize } from '../middleware/rbac';
 import express from 'express';
 import uploadRouter from './upload';
 import { getMasters, createMaster, updateMaster, deleteMaster } from '../controllers/masterController';
+import { getCustomColumns, createCustomColumn, deleteCustomColumn } from '../controllers/customColumnController';
 
 const router = Router();
 
@@ -166,5 +167,10 @@ router.get('/overhead/summary', authorize(['overhead-report', 'reports/accounts'
 router.post('/overhead', authorize(['overhead-report']), createOverheadEntry);
 router.put('/overhead/:id', authorize(['overhead-report']), updateOverheadEntry);
 router.delete('/overhead/:id', authorize(['overhead-report']), deleteOverheadEntry);
+
+// Custom Columns
+router.get('/custom-columns', authorize(['all']), getCustomColumns);
+router.post('/custom-columns', authorize(['all', 'admin']), createCustomColumn);
+router.delete('/custom-columns/:id', authorize(['all', 'admin']), deleteCustomColumn);
 
 export default router;

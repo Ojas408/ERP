@@ -138,3 +138,17 @@ export const deleteDocument = async (id: string) => {
   });
   return handleResponse(response);
 };
+
+// Custom Columns API
+export const fetchCustomColumns = async (entity?: string) => {
+  const url = entity ? `custom-columns?entity=${entity}` : 'custom-columns';
+  return fetchRecords(url);
+};
+
+export const createCustomColumn = async (data: any) => {
+  return createRecord('custom-columns', data);
+};
+
+export const deleteCustomColumn = async (id: string) => {
+  return deleteRecord('custom-columns', id);
+};

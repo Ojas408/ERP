@@ -44,8 +44,9 @@ model Tenant {
   rmcGrades          RMCGrade[]
   scraps             Scrap[]
   overheadEntries    OverheadEntry[]
+  customColumns      CustomColumn[]
+  customData         Json?
 }
-
 
 model User {
   id        String   @id @default(uuid())
@@ -64,13 +65,13 @@ model Production {
   date            DateTime @default(now())
   amount          Float
   unit            String   @default("tons")
-  grade           String?  // RMC grade: M20, M25, M30 etc.
-  productionType  String?  // Slab, Column, Transit Mixture, Foundation, etc.
+  grade           String? // RMC grade: M20, M25, M30 etc.
+  productionType  String? // Slab, Column, Transit Mixture, Foundation, etc.
   siteId          String?
   site            Site?    @relation(fields: [siteId], references: [id])
   notes           String?
   quality         String?
-  towerName       String?  // Building / tower / slab reference
+  towerName       String? // Building / tower / slab reference
   isRejected      Boolean  @default(false)
   rejectionReason String?
   tenantId        String
@@ -128,7 +129,7 @@ model Maintenance {
   date        DateTime @default(now())
   vehicleId   String
   vehicle     Vehicle  @relation(fields: [vehicleId], references: [id])
-  type        String   // Routine, Repair, Breakdown
+  type        String // Routine, Repair, Breakdown
   cost        Float
   description String?
   status      String   @default("completed") // completed, pending
@@ -189,7 +190,7 @@ model Vehicle {
   documents    Document[]
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
-  
+
   @@unique([plateNumber, tenantId])
 }
 
@@ -223,24 +224,24 @@ model Vendor {
 
 model PurchaseOrder {
   id          String   @id @default(uuid())
-  orderNumber String   
+  orderNumber String
   date        DateTime @default(now())
   vendorId    String
   vendor      Vendor   @relation(fields: [vendorId], references: [id])
   totalAmount Float
   status      String   @default("pending") // pending, received, cancelled
-  items       String?  // JSON string or summary
+  items       String? // JSON string or summary
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  
+
   @@unique([orderNumber, tenantId])
 }
 
 model Challan {
   id            String     @id @default(uuid())
-  challanNumber String   
+  challanNumber String
   date          DateTime   @default(now())
   vehicleId     String
   vehicle       Vehicle    @relation(fields: [vehicleId], references: [id])
@@ -258,9 +259,9 @@ model Challan {
 }
 
 model VehicleMovement {
-  id           String   @id @default(uuid())
+  id           String    @id @default(uuid())
   vehicleId    String
-  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicle      Vehicle   @relation(fields: [vehicleId], references: [id])
   fromLocation String
   toLocation   String
   startTime    DateTime
@@ -268,9 +269,9 @@ model VehicleMovement {
   distance     Float?
   fuelConsumed Float?
   tenantId     String
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  tenant       Tenant    @relation(fields: [tenantId], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 }
 
 // Master Data Models
@@ -312,22 +313,22 @@ model UnitOfMeasure {
 
 // Local File Uploads Model
 model Document {
-  id           String    @id @default(uuid())
+  id           String   @id @default(uuid())
   fileName     String
   originalName String
   fileType     String
   filePath     String
   fileSize     Int
-  uploadedAt   DateTime  @default(now())
+  uploadedAt   DateTime @default(now())
   tenantId     String
-  tenant       Tenant    @relation(fields: [tenantId], references: [id])
-  
-  employeeId   String?
-  employee     Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  vehicleId    String?
-  vehicle      Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
-  challanId    String?
-  challan      Challan?  @relation(fields: [challanId], references: [id], onDelete: Cascade)
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+
+  employeeId String?
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  vehicleId  String?
+  vehicle    Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  challanId  String?
+  challan    Challan?  @relation(fields: [challanId], references: [id], onDelete: Cascade)
 }
 
 // Global Activity logs
@@ -366,17 +367,17 @@ model MaterialInward {
 }
 
 model RMCGrade {
-  id                  String   @id @default(uuid())
-  grade               String   // M20, M25, M30, M35 etc.
-  mixRatio            String?  // e.g. 1:1.5:3
-  cementContent       Float?   // in kg/m3
-  waterCementRatio    Float?   // e.g. 0.45
-  admixture           String?  // e.g. superplasticizer
-  description         String?
-  tenantId            String
-  tenant              Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id               String   @id @default(uuid())
+  grade            String // M20, M25, M30, M35 etc.
+  mixRatio         String? // e.g. 1:1.5:3
+  cementContent    Float? // in kg/m3
+  waterCementRatio Float? // e.g. 0.45
+  admixture        String? // e.g. superplasticizer
+  description      String?
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   @@unique([grade, tenantId])
 }
@@ -384,9 +385,9 @@ model RMCGrade {
 model Scrap {
   id           String   @id @default(uuid())
   date         DateTime @default(now())
-  materialType String   // Steel, Concrete, Wood etc.
+  materialType String // Steel, Concrete, Wood etc.
   quantity     Float
-  unit         String   // tons, kg, units
+  unit         String // tons, kg, units
   siteId       String?
   site         Site?    @relation(fields: [siteId], references: [id], onDelete: Cascade)
   saleStatus   String   @default("stored") // stored, sold, disposed
@@ -402,16 +403,27 @@ model Scrap {
 model OverheadEntry {
   id          String   @id @default(uuid())
   date        DateTime @default(now())
-  category    String   // Transit Mixture, Slabs, Cement, Aggregate, Labour, Fuel, Maintenance, Other
+  category    String // Transit Mixture, Slabs, Cement, Aggregate, Labour, Fuel, Maintenance, Other
   description String?
   quantity    Float?
-  unit        String?  // cum, sqm, bags, tons, trips
+  unit        String? // cum, sqm, bags, tons, trips
   amount      Float
   siteId      String?
   site        Site?    @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  customData  Json?
   tenantId    String
-  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
 
+model CustomColumn {
+  id        String   @id @default(uuid())
+  entity    String
+  name      String
+  key       String
+  type      String
+  tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt DateTime @default(now())
+}
