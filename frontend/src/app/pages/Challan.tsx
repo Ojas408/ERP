@@ -48,9 +48,11 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "../components/ui/dialog"
-import { exportToExcel, downloadExcelTemplate, parseExcelFile, printReport } from "../lib/excel-helper"
+import { exportToExcel, downloadExcelTemplate, printReport } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
 import { toast } from "sonner"
+import { useExcelImport } from "../hooks/use-excel-import"
+import { toDateInputValue, toIsoString } from "../lib/date"
 
 export default function Challan() {
   const [challans, setChallans] = useState<any[]>([])
@@ -84,7 +86,7 @@ export default function Challan() {
   // CRUD Forms State
   const [newChallan, setNewChallan] = useState({
     challanNumber: "",
-    date: new Date().toISOString().split('T')[0],
+    date: toDateInputValue(),
     vehicleId: "",
     material: "Sand",
     quantity: "15", // e.g. tons
@@ -94,9 +96,9 @@ export default function Challan() {
 
   const [editingItem, setEditingItem] = useState<any>(null)
 
-  // SheetJS Import Preview States
-  const [importData, setImportData] = useState<any[]>([])
-  const [isImportOpen, setIsImportOpen] = useState(false)
+  const { importData, isImportOpen, setIsImportOpen, handleExcelImport } = useExcelImport({
+    onError: (error) => toast.error(error.message),
+  })
 
   useEffect(() => {
     loadData()
@@ -180,7 +182,7 @@ export default function Challan() {
       setIsAddOpen(false)
       setNewChallan({
         challanNumber: `CHL-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
-        date: new Date().toISOString().split('T')[0],
+        date: toDateInputValue(),
         vehicleId: "",
         material: "Sand",
         quantity: "15",
@@ -197,7 +199,7 @@ export default function Challan() {
   const handleEdit = (chl: any) => {
     setEditingItem({
       ...chl,
-      date: chl.date ? new Date(chl.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      date: toDateInputValue(chl.date),
       quantity: String(chl.quantity || 0),
       vehicleId: chl.vehicleId || "",
       destination: chl.destination || "",
@@ -308,20 +310,6 @@ export default function Challan() {
     )
   }
 
-  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    parseExcelFile(file)
-      .then((data) => {
-        setImportData(data)
-        setIsImportOpen(true)
-      })
-      .catch((err) => {
-        toast.error(err.message || "Failed to parse excel file")
-      })
-    e.target.value = ""
-  }
-
   const handleConfirmImport = async (parsedRows: any[]) => {
     try {
       const formatted = parsedRows.map(row => {
@@ -332,7 +320,7 @@ export default function Challan() {
         }
         return {
           challanNumber: String(row.challanNumber || `CHL-${Date.now()}`),
-          date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
+          date: toIsoString(row.date),
           vehicleId: vehicle.id,
           material: String(row.material || "Sand"),
           quantity: parseFloat(row.quantity) || 0,

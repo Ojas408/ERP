@@ -20,9 +20,11 @@ import {
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
-import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
+import { exportToExcel, downloadExcelTemplate } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
 import { ManageColumnsModal } from "../components/ManageColumnsModal"
+import { useExcelImport } from "../hooks/use-excel-import"
+import { toDateTimeInputValue, toIsoString } from "../lib/date"
 
 export default function Production() {
   const [productions, setProductions] = useState<any[]>([])
@@ -34,7 +36,7 @@ export default function Production() {
   const [editingItem, setEditingItem] = useState<any>(null)
   const [newProd, setNewProd] = useState({
     siteId: "",
-    date: new Date().toISOString().slice(0, 16),
+    date: toDateTimeInputValue(),
     amount: "",
     unit: "cum",
     grade: "",
@@ -47,9 +49,9 @@ export default function Production() {
     customData: {} as Record<string, any>
   })
 
-  // SheetJS Import Preview States
-  const [importData, setImportData] = useState<any[]>([])
-  const [isImportOpen, setIsImportOpen] = useState(false)
+  const { importData, isImportOpen, setIsImportOpen, handleExcelImport } = useExcelImport({
+    onError: (error) => console.error("Failed to parse excel file", error),
+  })
   const [customCols, setCustomCols] = useState<any[]>([])
   const [isManageColsOpen, setIsManageColsOpen] = useState(false)
 
@@ -84,12 +86,12 @@ export default function Production() {
         ...newProd,
         amount: parseFloat(newProd.amount) || 0,
         quality: newProd.grade || newProd.quality,
-        date: new Date(newProd.date).toISOString()
+        date: toIsoString(newProd.date)
       })
       setIsAddOpen(false)
       setNewProd({
         siteId: "",
-        date: new Date().toISOString().slice(0, 16),
+        date: toDateTimeInputValue(),
         amount: "",
         unit: "cum",
         grade: "",
@@ -109,7 +111,7 @@ export default function Production() {
   const handleEdit = (item: any) => {
     setEditingItem({
       ...item,
-      date: item.date ? new Date(item.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
+      date: toDateTimeInputValue(item.date),
       amount: String(item.amount || 0),
       grade: item.grade || item.quality || "",
       productionType: item.productionType || "",
@@ -128,7 +130,7 @@ export default function Production() {
     try {
       await updateRecord('production', editingItem.id, {
         siteId: editingItem.siteId,
-        date: new Date(editingItem.date).toISOString(),
+        date: toIsoString(editingItem.date),
         amount: parseFloat(editingItem.amount) || 0,
         unit: editingItem.unit,
         notes: editingItem.notes,
@@ -165,25 +167,11 @@ export default function Production() {
     )
   }
 
-  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    parseExcelFile(file)
-      .then((data) => {
-        setImportData(data)
-        setIsImportOpen(true)
-      })
-      .catch((err) => {
-        console.error("Failed to parse excel file", err)
-      })
-    e.target.value = ""
-  }
-
   const handleConfirmImport = async (parsedRows: any[]) => {
     try {
       const formatted = parsedRows.map(row => ({
         siteId: String(row.siteId || ""),
-        date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
+        date: toIsoString(row.date),
         amount: parseFloat(row.amount) || 0,
         unit: String(row.unit || "cum"),
         grade: String(row.grade || ""),

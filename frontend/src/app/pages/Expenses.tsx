@@ -43,9 +43,11 @@ import {
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
-import { exportToExcel, downloadExcelTemplate, parseExcelFile, printReport } from "../lib/excel-helper"
+import { exportToExcel, downloadExcelTemplate, printReport } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
 import { toast } from "sonner"
+import { useExcelImport } from "../hooks/use-excel-import"
+import { toDateInputValue, toIsoString } from "../lib/date"
 
 export default function Expenses() {
   const [expenses, setExpenses] = useState<any[]>([])
@@ -68,16 +70,16 @@ export default function Expenses() {
 
   // CRUD Forms State
   const [newExpense, setNewExpense] = useState({
-    date: new Date().toISOString().split('T')[0],
+    date: toDateInputValue(),
     category: "",
     amount: "",
     description: "",
     paymentStatus: "pending" // pending, approved, paid
   })
 
-  // SheetJS Import Preview States
-  const [importData, setImportData] = useState<any[]>([])
-  const [isImportOpen, setIsImportOpen] = useState(false)
+  const { importData, isImportOpen, setIsImportOpen, handleExcelImport } = useExcelImport({
+    onError: (error) => toast.error(error.message),
+  })
 
   useEffect(() => {
     loadData()
@@ -115,7 +117,7 @@ export default function Expenses() {
       toast.success("Expense transaction logged successfully")
       setIsAddOpen(false)
       setNewExpense({
-        date: new Date().toISOString().split('T')[0],
+        date: toDateInputValue(),
         category: categories[0]?.name || "Fuel",
         amount: "",
         description: "",
@@ -131,7 +133,7 @@ export default function Expenses() {
   const handleEdit = (item: any) => {
     setEditingItem({
       ...item,
-      date: new Date(item.date).toISOString().split('T')[0],
+      date: toDateInputValue(item.date),
       amount: String(item.amount)
     })
     setIsEditOpen(true)
@@ -188,24 +190,10 @@ export default function Expenses() {
     )
   }
 
-  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    parseExcelFile(file)
-      .then((data) => {
-        setImportData(data)
-        setIsImportOpen(true)
-      })
-      .catch((err) => {
-        toast.error(err.message || "Failed to parse excel file")
-      })
-    e.target.value = ""
-  }
-
   const handleConfirmImport = async (parsedRows: any[]) => {
     try {
       const formatted = parsedRows.map(row => ({
-        date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
+        date: toIsoString(row.date),
         category: String(row.category || "Fuel"),
         amount: parseFloat(row.amount) || 0,
         description: String(row.description || ""),

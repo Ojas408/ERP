@@ -19,8 +19,10 @@ import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
-import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
+import { exportToExcel, downloadExcelTemplate } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
+import { useExcelImport } from "../hooks/use-excel-import"
+import { toDateTimeInputValue } from "../lib/date"
 
 export default function VehicleMovement() {
   const [vehicles, setVehicles] = useState<any[]>([])
@@ -37,15 +39,15 @@ export default function VehicleMovement() {
     vehicleId: "",
     fromLocation: "",
     toLocation: "",
-    startTime: new Date().toISOString().slice(0, 16),
+    startTime: toDateTimeInputValue(),
     endTime: "",
     distance: "",
     fuelConsumed: ""
   })
 
-  // SheetJS Import Preview States
-  const [importData, setImportData] = useState<any[]>([])
-  const [isImportOpen, setIsImportOpen] = useState(false)
+  const { importData, isImportOpen, setIsImportOpen, handleExcelImport } = useExcelImport({
+    onError: (error) => console.error("Failed to parse excel file", error),
+  })
 
   useEffect(() => {
     loadData()
@@ -88,7 +90,7 @@ export default function VehicleMovement() {
         vehicleId: "",
         fromLocation: "",
         toLocation: "",
-        startTime: new Date().toISOString().slice(0, 16),
+        startTime: toDateTimeInputValue(),
         endTime: "",
         distance: "",
         fuelConsumed: ""
@@ -104,20 +106,6 @@ export default function VehicleMovement() {
       ["plateNumber", "model", "status"],
       "vehicles_import_template"
     )
-  }
-
-  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    parseExcelFile(file)
-      .then((data) => {
-        setImportData(data)
-        setIsImportOpen(true)
-      })
-      .catch((err) => {
-        console.error("Failed to parse excel file", err)
-      })
-    e.target.value = ""
   }
 
   const handleConfirmImport = async (parsedRows: any[]) => {
