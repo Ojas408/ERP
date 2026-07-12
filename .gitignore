@@ -24,3 +24,7 @@ backend.zip
 
 # Vite cache
 frontend/node_modules/.vite/
+
+# Test coverage
+backend/coverage/
+coverage/
