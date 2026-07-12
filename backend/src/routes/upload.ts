@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+import { NextFunction, Router, Response } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -32,7 +32,7 @@ const upload = multer({
 });
 
 // POST /api/upload - Handle file upload and log metadata in Document model
-router.post('/', upload.single('file'), async (req: AuthRequest, res: Response) => {
+router.post('/', upload.single('file'), async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const userId = req.user!.userId;
@@ -69,13 +69,12 @@ router.post('/', upload.single('file'), async (req: AuthRequest, res: Response) 
 
     res.status(201).json(fileDocument);
   } catch (error) {
-    console.error('Error uploading file:', error);
-    res.status(500).json({ message: 'Failed to upload file' });
+    next(error);
   }
 });
 
 // GET /api/upload - List documents for the tenant (optional filter by entity)
-router.get('/', async (req: AuthRequest, res: Response) => {
+router.get('/', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const { employeeId, vehicleId, challanId } = req.query;
@@ -92,13 +91,12 @@ router.get('/', async (req: AuthRequest, res: Response) => {
 
     res.json(documents);
   } catch (error) {
-    console.error('Error fetching documents:', error);
-    res.status(500).json({ message: 'Failed to fetch documents' });
+    next(error);
   }
 });
 
 // DELETE /api/upload/:id - Delete a file document
-router.delete('/:id', async (req: AuthRequest, res: Response) => {
+router.delete('/:id', async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const userId = req.user!.userId;
@@ -132,8 +130,7 @@ router.delete('/:id', async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Document deleted successfully' });
   } catch (error) {
-    console.error('Error deleting document:', error);
-    res.status(500).json({ message: 'Failed to delete document' });
+    next(error);
   }
 });
 

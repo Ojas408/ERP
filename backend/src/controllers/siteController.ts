@@ -1,18 +1,18 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 
-export const getSites = async (req: AuthRequest, res: Response) => {
+export const getSites = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const sites = await prisma.site.findMany({ where: { tenantId } });
     res.json(sites);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching sites' });
+    next(error);
   }
 };
 
-export const createSite = async (req: AuthRequest, res: Response) => {
+export const createSite = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { name, location, status } = req.body;
   try {
@@ -21,11 +21,11 @@ export const createSite = async (req: AuthRequest, res: Response) => {
     });
     res.status(201).json(site);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating site' });
+    next(error);
   }
 };
 
-export const updateSite = async (req: AuthRequest, res: Response) => {
+export const updateSite = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const id = req.params.id as string;
   const { name, location, status } = req.body;
@@ -37,17 +37,17 @@ export const updateSite = async (req: AuthRequest, res: Response) => {
     const site = await prisma.site.findFirst({ where: { id, tenantId } });
     res.json(site);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating site' });
+    next(error);
   }
 };
 
-export const deleteSite = async (req: AuthRequest, res: Response) => {
+export const deleteSite = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const id = req.params.id as string;
   try {
     await prisma.site.deleteMany({ where: { id, tenantId } });
     res.json({ message: 'Site deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting site' });
+    next(error);
   }
 };

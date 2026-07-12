@@ -1,8 +1,8 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 
-export const getVehicleMovements = async (req: AuthRequest, res: Response) => {
+export const getVehicleMovements = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const movements = await prisma.vehicleMovement.findMany({
@@ -12,11 +12,11 @@ export const getVehicleMovements = async (req: AuthRequest, res: Response) => {
     });
     res.json(movements);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching vehicle movements' });
+    next(error);
   }
 };
 
-export const createVehicleMovement = async (req: AuthRequest, res: Response) => {
+export const createVehicleMovement = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { vehicleId, fromLocation, toLocation, startTime, endTime, distance, fuelConsumed } = req.body;
   try {
@@ -34,11 +34,11 @@ export const createVehicleMovement = async (req: AuthRequest, res: Response) => 
     });
     res.status(201).json(movement);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating vehicle movement' });
+    next(error);
   }
 };
 
-export const updateVehicleMovement = async (req: AuthRequest, res: Response) => {
+export const updateVehicleMovement = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const id = req.params.id as string;
   const { vehicleId, fromLocation, toLocation, startTime, endTime, distance, fuelConsumed } = req.body;
@@ -58,17 +58,17 @@ export const updateVehicleMovement = async (req: AuthRequest, res: Response) => 
     const movement = await prisma.vehicleMovement.findFirst({ where: { id, tenantId } });
     res.json(movement);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating vehicle movement' });
+    next(error);
   }
 };
 
-export const deleteVehicleMovement = async (req: AuthRequest, res: Response) => {
+export const deleteVehicleMovement = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const id = req.params.id as string;
   try {
     await prisma.vehicleMovement.deleteMany({ where: { id, tenantId } });
     res.json({ message: 'Vehicle movement deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting vehicle movement' });
+    next(error);
   }
 };

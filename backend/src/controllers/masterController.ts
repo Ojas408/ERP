@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/audit';
@@ -17,7 +17,7 @@ const getModel = (type: string) => {
   return (prisma as any)[modelName];
 };
 
-export const getMasters = async (req: AuthRequest, res: Response) => {
+export const getMasters = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const type = req.params.type as string;
@@ -28,12 +28,11 @@ export const getMasters = async (req: AuthRequest, res: Response) => {
     const items = await model.findMany({ where: { tenantId } });
     res.json(items);
   } catch (error) {
-    console.error('Error fetching master data:', error);
-    res.status(500).json({ message: 'Failed to fetch master data' });
+    next(error);
   }
 };
 
-export const createMaster = async (req: AuthRequest, res: Response) => {
+export const createMaster = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const { userId, email } = req.user!;
@@ -87,12 +86,11 @@ export const createMaster = async (req: AuthRequest, res: Response) => {
       return res.status(201).json(item);
     }
   } catch (error) {
-    console.error('Error creating master data:', error);
-    res.status(500).json({ message: 'Failed to create master data' });
+    next(error);
   }
 };
 
-export const updateMaster = async (req: AuthRequest, res: Response) => {
+export const updateMaster = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const { userId, email } = req.user!;
@@ -127,12 +125,11 @@ export const updateMaster = async (req: AuthRequest, res: Response) => {
 
     res.json(updatedItem);
   } catch (error) {
-    console.error('Error updating master data:', error);
-    res.status(500).json({ message: 'Failed to update master data' });
+    next(error);
   }
 };
 
-export const deleteMaster = async (req: AuthRequest, res: Response) => {
+export const deleteMaster = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const { userId, email } = req.user!;
@@ -158,7 +155,6 @@ export const deleteMaster = async (req: AuthRequest, res: Response) => {
 
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
-    console.error('Error deleting master data:', error);
-    res.status(500).json({ message: 'Failed to delete master data' });
+    next(error);
   }
 };

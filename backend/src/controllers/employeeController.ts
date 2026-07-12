@@ -1,19 +1,19 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/audit';
 
-export const getEmployees = async (req: AuthRequest, res: Response) => {
+export const getEmployees = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const employees = await prisma.employee.findMany({ where: { tenantId } });
     res.json(employees);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching employees' });
+    next(error);
   }
 };
 
-export const createEmployee = async (req: AuthRequest, res: Response) => {
+export const createEmployee = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const data = req.body;
@@ -56,12 +56,11 @@ export const createEmployee = async (req: AuthRequest, res: Response) => {
       res.status(201).json(employee);
     }
   } catch (error) {
-    console.error('Error in createEmployee:', error);
-    res.status(500).json({ message: 'Error creating employee' });
+    next(error);
   }
 };
 
-export const deleteEmployee = async (req: AuthRequest, res: Response) => {
+export const deleteEmployee = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const { userId, email } = req.user!;
@@ -70,11 +69,11 @@ export const deleteEmployee = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'DELETE', 'Employee', `Deleted employee ID: ${id}`);
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete employee' });
+    next(error);
   }
 };
 
-export const updateEmployee = async (req: AuthRequest, res: Response) => {
+export const updateEmployee = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const { userId, email } = req.user!;
@@ -98,6 +97,6 @@ export const updateEmployee = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'UPDATE', 'Employee', `Updated employee ID: ${id}`);
     res.json(employee);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update employee' });
+    next(error);
   }
 };

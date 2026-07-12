@@ -1,9 +1,9 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/audit';
 
-export const getProductions = async (req: AuthRequest, res: Response) => {
+export const getProductions = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const productions = await prisma.production.findMany({
@@ -13,11 +13,11 @@ export const getProductions = async (req: AuthRequest, res: Response) => {
     });
     res.json(productions);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching productions' });
+    next(error);
   }
 };
 
-export const createProduction = async (req: AuthRequest, res: Response) => {
+export const createProduction = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const data = req.body;
@@ -66,12 +66,11 @@ export const createProduction = async (req: AuthRequest, res: Response) => {
       res.status(201).json(production);
     }
   } catch (error) {
-    console.error('Error creating production:', error);
-    res.status(500).json({ message: 'Error creating production' });
+    next(error);
   }
 };
 
-export const deleteProduction = async (req: AuthRequest, res: Response) => {
+export const deleteProduction = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const id = req.params.id as string;
     const tenantId = req.user!.tenantId;
@@ -80,11 +79,11 @@ export const deleteProduction = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'DELETE', 'Production', `Deleted production log ID: ${id}`);
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete production' });
+    next(error);
   }
 };
 
-export const updateProduction = async (req: AuthRequest, res: Response) => {
+export const updateProduction = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const id = req.params.id as string;
     const tenantId = req.user!.tenantId;
@@ -112,6 +111,6 @@ export const updateProduction = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'UPDATE', 'Production', `Updated production log ID: ${id}`);
     res.json(production);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update production' });
+    next(error);
   }
 };

@@ -22,14 +22,19 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
   const token = authHeader.split(' ')[1];
 
+  let decoded: { userId: string; email: string; role: string; tenantId: string };
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string; role: string; tenantId: string };
-    
+    decoded = jwt.verify(token, JWT_SECRET) as { userId: string; email: string; role: string; tenantId: string };
+  } catch {
+    return res.status(401).json({ message: 'Invalid or expired token' });
+  }
+
+  try {
     // Verify that the tenant actually exists in the database
     const tenantExists = await prisma.tenant.findUnique({
       where: { id: decoded.tenantId }
     });
-    
+
     if (!tenantExists) {
       return res.status(401).json({ message: 'Session invalid: workspace no longer exists' });
     }
@@ -37,7 +42,8 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     req.user = decoded;
     next();
   } catch (error) {
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    // Unexpected failures (e.g. database errors) must not be masked as auth failures.
+    next(error);
   }
 };
 

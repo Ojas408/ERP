@@ -1,4 +1,4 @@
-import express, { NextFunction, Request, Response } from 'express';
+import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
@@ -7,6 +7,7 @@ import path from 'path';
 import prisma from './lib/prisma';
 import authRoutes from './routes/authRoutes';
 import apiRoutes from './routes/api';
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
 dotenv.config();
 
@@ -77,13 +78,9 @@ app.get('/', (_req, res) => {
   });
 });
 
-app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err.stack || err.message);
-  res.status(err.status || 500).json({
-    message: err.message || 'Internal Server Error',
-    ...(!isProd && { error: err }),
-  });
-});
+app.use(notFoundHandler);
+
+app.use(errorHandler);
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Construction ERP API running on port ${PORT} (${NODE_ENV})`);

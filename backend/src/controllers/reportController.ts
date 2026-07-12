@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 
@@ -25,7 +25,7 @@ const durationHours = (start: Date, end?: Date | null) => {
   return Math.max(0, (endTime - start.getTime()) / 36e5);
 };
 
-export const getBusinessReport = async (req: AuthRequest, res: Response) => {
+export const getBusinessReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const [productions, expenses, purchaseOrders, vehicles, maintenances, employees] = await Promise.all([
@@ -112,11 +112,11 @@ export const getBusinessReport = async (req: AuthRequest, res: Response) => {
       ],
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error building business report' });
+    next(error);
   }
 };
 
-export const getAccountsReport = async (req: AuthRequest, res: Response) => {
+export const getAccountsReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const [productions, expenses, purchaseOrders, vendors] = await Promise.all([
@@ -196,11 +196,11 @@ export const getAccountsReport = async (req: AuthRequest, res: Response) => {
 
     res.json({ plData, cashFlowData, gstData, receivables, payables });
   } catch (error) {
-    res.status(500).json({ message: 'Error building accounts report' });
+    next(error);
   }
 };
 
-export const getEfficiencyReport = async (req: AuthRequest, res: Response) => {
+export const getEfficiencyReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const [productions, vehicles, maintenances, attendances, movements] = await Promise.all([
@@ -287,11 +287,11 @@ export const getEfficiencyReport = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error building efficiency report' });
+    next(error);
   }
 };
 
-export const getTargetReport = async (req: AuthRequest, res: Response) => {
+export const getTargetReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const [productions, expenses, maintenances, movements] = await Promise.all([
@@ -347,11 +347,11 @@ export const getTargetReport = async (req: AuthRequest, res: Response) => {
 
     res.json({ monthlyTargets, departmentTargets, weeklyProgress, performanceMetrics });
   } catch (error) {
-    res.status(500).json({ message: 'Error building target report' });
+    next(error);
   }
 };
 
-export const getTimeMotionReport = async (req: AuthRequest, res: Response) => {
+export const getTimeMotionReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const [movements, challans] = await Promise.all([
@@ -395,11 +395,11 @@ export const getTimeMotionReport = async (req: AuthRequest, res: Response) => {
 
     res.json({ vehicleTimeData, delayReasonData });
   } catch (error) {
-    res.status(500).json({ message: 'Error building time motion report' });
+    next(error);
   }
 };
 
-export const getMaintenanceOverviewReport = async (req: AuthRequest, res: Response) => {
+export const getMaintenanceOverviewReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const [vehicles, maintenances] = await Promise.all([
@@ -422,11 +422,11 @@ export const getMaintenanceOverviewReport = async (req: AuthRequest, res: Respon
 
     res.json({ equipmentData });
   } catch (error) {
-    res.status(500).json({ message: 'Error building maintenance overview' });
+    next(error);
   }
 };
 
-export const getSettingsReport = async (req: AuthRequest, res: Response) => {
+export const getSettingsReport = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const admin = await prisma.user.findFirst({ where: { tenantId }, orderBy: { createdAt: 'asc' } });
@@ -455,6 +455,6 @@ export const getSettingsReport = async (req: AuthRequest, res: Response) => {
       },
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error loading settings' });
+    next(error);
   }
 };
