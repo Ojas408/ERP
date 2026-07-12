@@ -15,17 +15,25 @@ const PORT = parseInt(process.env.PORT || '5000', 10);
 const NODE_ENV = process.env.NODE_ENV || 'development';
 const isProd = NODE_ENV === 'production';
 
-const corsOrigins = process.env.CORS_ORIGIN
-  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+const corsOriginEnv = process.env.CORS_ORIGIN?.trim();
+const allowAllOrigins = corsOriginEnv === '*';
+const corsOrigins = corsOriginEnv && !allowAllOrigins
+  ? corsOriginEnv.split(',').map((o) => o.trim()).filter(Boolean)
   : ['http://localhost:5173', 'http://localhost:80', 'http://localhost'];
 
 app.use(helmet({
   crossOriginResourcePolicy: false,
 }));
 
+// When any origin is allowed ('*') credentials MUST be disabled: reflecting an
+// arbitrary origin together with Access-Control-Allow-Credentials exposes the
+// API to credentialed cross-origin requests from any site.
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin || corsOrigins.includes('*') || corsOrigins.includes(origin)) {
+    if (!origin) {
+      // Same-origin or non-browser clients (e.g. curl) send no Origin header.
+      callback(null, true);
+    } else if (allowAllOrigins || corsOrigins.includes(origin)) {
       callback(null, true);
     } else if (!isProd) {
       callback(null, true);
@@ -33,7 +41,7 @@ app.use(cors({
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true,
+  credentials: !allowAllOrigins,
 }));
 
 app.use(express.json({ limit: '10mb' }));
