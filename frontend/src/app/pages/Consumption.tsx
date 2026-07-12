@@ -18,9 +18,11 @@ import {
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
-import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
+import { exportToExcel, downloadExcelTemplate } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
 import { ManageColumnsModal } from "../components/ManageColumnsModal"
+import { useExcelImport } from "../hooks/use-excel-import"
+import { toDateInputValue, toIsoString } from "../lib/date"
 
 export default function Consumption() {
   const [consumptions, setConsumptions] = useState<any[]>([])
@@ -34,15 +36,15 @@ export default function Consumption() {
     amount: "",
     unit: "Liters",
     siteId: "",
-    date: new Date().toISOString().split('T')[0],
+    date: toDateInputValue(),
     isRejected: false,
     rejectionReason: "",
     customData: {} as Record<string, any>
   })
 
-  // SheetJS Import Preview States
-  const [importData, setImportData] = useState<any[]>([])
-  const [isImportOpen, setIsImportOpen] = useState(false)
+  const { importData, isImportOpen, setIsImportOpen, handleExcelImport } = useExcelImport({
+    onError: (error) => console.error("Failed to parse excel file", error),
+  })
   const [customCols, setCustomCols] = useState<any[]>([])
   const [isManageColsOpen, setIsManageColsOpen] = useState(false)
 
@@ -81,7 +83,7 @@ export default function Consumption() {
         amount: "",
         unit: "Liters",
         siteId: "",
-        date: new Date().toISOString().split('T')[0],
+        date: toDateInputValue(),
         isRejected: false,
         rejectionReason: ""
       })
@@ -94,7 +96,7 @@ export default function Consumption() {
   const handleEdit = (item: any) => {
     setEditingItem({
       ...item,
-      date: new Date(item.date).toISOString().split('T')[0],
+      date: toDateInputValue(item.date),
       amount: String(item.amount || 0),
       isRejected: item.isRejected || false,
       rejectionReason: item.rejectionReason || "",
@@ -142,24 +144,10 @@ export default function Consumption() {
     )
   }
 
-  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    parseExcelFile(file)
-      .then((data) => {
-        setImportData(data)
-        setIsImportOpen(true)
-      })
-      .catch((err) => {
-        console.error("Failed to parse excel file", err)
-      })
-    e.target.value = ""
-  }
-
   const handleConfirmImport = async (parsedRows: any[]) => {
     try {
       const formatted = parsedRows.map(row => ({
-        date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
+        date: toIsoString(row.date),
         material: String(row.material || "Diesel"),
         amount: parseFloat(row.amount) || 0,
         unit: String(row.unit || "Liters"),

@@ -36,9 +36,10 @@ import {
   DialogFooter,
 } from "../components/ui/dialog"
 import { toast } from "sonner"
-import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
+import { exportToExcel, downloadExcelTemplate } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
 import { ManageColumnsModal } from "../components/ManageColumnsModal"
+import { useExcelImport } from "../hooks/use-excel-import"
 
 export default function RMCGrade() {
   const [grades, setGrades] = useState<any[]>([])
@@ -66,9 +67,9 @@ export default function RMCGrade() {
     description: ""
   })
 
-  // SheetJS Import Preview States
-  const [importData, setImportData] = useState<any[]>([])
-  const [isImportOpen, setIsImportOpen] = useState(false)
+  const { importData, isImportOpen, setIsImportOpen, handleExcelImport } = useExcelImport({
+    onError: () => toast.error("Failed to parse excel file"),
+  })
   const [customCols, setCustomCols] = useState<any[]>([])
   const [isManageColsOpen, setIsManageColsOpen] = useState(false)
 
@@ -159,20 +160,6 @@ export default function RMCGrade() {
       ["grade", "mixRatio", "cementContent", "waterCementRatio", "admixture", "description"],
       "rmc_grades_template"
     )
-  }
-
-  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    parseExcelFile(file)
-      .then((data) => {
-        setImportData(data)
-        setIsImportOpen(true)
-      })
-      .catch((err) => {
-        toast.error("Failed to parse excel file")
-      })
-    e.target.value = ""
   }
 
   const handleConfirmImport = async (parsedRows: any[]) => {

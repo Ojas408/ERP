@@ -19,8 +19,10 @@ import {
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
-import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
+import { exportToExcel, downloadExcelTemplate } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
+import { useExcelImport } from "../hooks/use-excel-import"
+import { toDateInputValue } from "../lib/date"
 
 export default function Maintenance() {
   const [maintenances, setMaintenances] = useState<any[]>([])
@@ -37,12 +39,12 @@ export default function Maintenance() {
     cost: "",
     description: "",
     status: "completed",
-    date: new Date().toISOString().split('T')[0]
+    date: toDateInputValue()
   })
 
-  // SheetJS Import Preview States
-  const [importData, setImportData] = useState<any[]>([])
-  const [isImportOpen, setIsImportOpen] = useState(false)
+  const { importData, isImportOpen, setIsImportOpen, handleExcelImport } = useExcelImport({
+    onError: (error) => console.error("Failed to parse excel file", error),
+  })
 
   useEffect(() => {
     loadData()
@@ -81,7 +83,7 @@ export default function Maintenance() {
         cost: "",
         description: "",
         status: "completed",
-        date: new Date().toISOString().split('T')[0]
+        date: toDateInputValue()
       })
       loadData()
     } catch (error) {
@@ -92,7 +94,7 @@ export default function Maintenance() {
   const handleEdit = (item: any) => {
     setEditingItem({
       ...item,
-      date: new Date(item.date).toISOString().split('T')[0]
+      date: toDateInputValue(item.date)
     })
     setIsEditOpen(true)
   }
@@ -130,20 +132,6 @@ export default function Maintenance() {
     )
   }
 
-  const handleExcelImport = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    parseExcelFile(file)
-      .then((data) => {
-        setImportData(data)
-        setIsImportOpen(true)
-      })
-      .catch((err) => {
-        console.error("Failed to parse excel file", err)
-      })
-    e.target.value = ""
-  }
-
   const handleConfirmImport = async (parsedRows: any[]) => {
     try {
       const formatted = parsedRows.map(row => ({
@@ -153,7 +141,7 @@ export default function Maintenance() {
         cost: parseFloat(row.cost) || 0,
         description: String(row.description || ""),
         status: String(row.status || "pending"),
-        date: row.date ? new Date(row.date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+        date: toDateInputValue(row.date)
       }))
       
       for (const item of formatted) {
