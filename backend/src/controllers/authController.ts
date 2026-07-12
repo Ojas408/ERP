@@ -2,15 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../lib/prisma';
-
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET is not set in environment variables');
-  }
-  console.warn('WARNING: Using default JWT_SECRET for development');
-}
-const SECRET = JWT_SECRET || 'your_secret_key';
+import { JWT_SECRET as SECRET } from '../lib/config';
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
