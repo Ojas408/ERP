@@ -14,18 +14,19 @@ import {
   Search, 
   ChevronLeft, 
   ChevronRight,
-  ChevronRight,
   ClipboardList,
   Download,
   Upload,
-  FileSpreadsheet
-, Settings2 } from "lucide-react"
+  FileSpreadsheet,
+  Settings2
+} from "lucide-react"
 import { 
   fetchRmcGrades, 
   createRmcGrade, 
   deleteRecord, 
-  updateRecord 
-, fetchCustomColumns } from "../services/api"
+  updateRecord,
+  fetchCustomColumns
+} from "../services/api"
 import {
   Dialog,
   DialogContent,
@@ -39,6 +40,7 @@ import { toast } from "sonner"
 import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
 import { ManageColumnsModal } from "../components/ManageColumnsModal"
+import { CustomFieldInputs } from "../components/CustomFieldInputs"
 
 export default function RMCGrade() {
   const [grades, setGrades] = useState<any[]>([])
@@ -63,7 +65,8 @@ export default function RMCGrade() {
     cementContent: "",
     waterCementRatio: "",
     admixture: "",
-    description: ""
+    description: "",
+    customData: {} as Record<string, any>
   })
 
   // SheetJS Import Preview States
@@ -79,8 +82,12 @@ export default function RMCGrade() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const data = await fetchRmcGrades()
+      const [data, colsData] = await Promise.all([
+        fetchRmcGrades(),
+        fetchCustomColumns("RMCGrade").catch(() => [])
+      ])
       setGrades(Array.isArray(data) ? data : [])
+      setCustomCols(Array.isArray(colsData) ? colsData : [])
     } catch (error) {
       console.error("Failed to load RMC grades:", error)
       toast.error("Failed to load RMC grades")
@@ -105,7 +112,8 @@ export default function RMCGrade() {
         cementContent: "",
         waterCementRatio: "",
         admixture: "",
-        description: ""
+        description: "",
+        customData: {}
       })
       loadData()
     } catch (error) {
@@ -120,7 +128,8 @@ export default function RMCGrade() {
       waterCementRatio: item.waterCementRatio ? String(item.waterCementRatio) : "",
       mixRatio: item.mixRatio || "",
       admixture: item.admixture || "",
-      description: item.description || ""
+      description: item.description || "",
+      customData: item.customData || {}
     })
     setIsEditOpen(true)
   }
@@ -183,7 +192,8 @@ export default function RMCGrade() {
         cementContent: row.cementContent ? parseFloat(row.cementContent) : null,
         waterCementRatio: row.waterCementRatio ? parseFloat(row.waterCementRatio) : null,
         admixture: String(row.admixture || ""),
-        description: String(row.description || "")
+        description: String(row.description || ""),
+        customData: customCols.reduce((acc: any, col: any) => ({ ...acc, [col.key]: row[col.key] }), {})
       }))
       
       for (const item of formatted) {
@@ -206,7 +216,8 @@ export default function RMCGrade() {
       CementContent: g.cementContent,
       WaterCementRatio: g.waterCementRatio,
       Admixtures: g.admixture,
-      Description: g.description
+      Description: g.description,
+      ...(g.customData || {})
     }))
     exportToExcel(data, "rmc_grades_report")
   }
@@ -244,6 +255,10 @@ export default function RMCGrade() {
           <Button variant="outline" className="text-xs h-9" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={() => setIsManageColsOpen(true)}>
+            <Settings2 className="h-4 w-4 mr-2" />
+            Columns
           </Button>
           <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleDownloadTemplate}>
             <Download className="h-4 w-4 mr-2" />
@@ -296,6 +311,11 @@ export default function RMCGrade() {
                     <Label htmlFor="rmcDesc">Mix Specifications / Description</Label>
                     <Input id="rmcDesc" placeholder="Standard mix design for slab and beams casting. Slump: 100-120mm." value={newGrade.description} onChange={e => setNewGrade({...newGrade, description: e.target.value})} />
                   </div>
+                  <CustomFieldInputs
+                    columns={customCols}
+                    values={newGrade.customData}
+                    onChange={(key, value) => setNewGrade({ ...newGrade, customData: { ...newGrade.customData, [key]: value } })}
+                  />
                 </div>
                 <DialogFooter className="pt-2">
                   <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
@@ -344,14 +364,17 @@ export default function RMCGrade() {
                   <TableHead className="font-bold text-slate-700 dark:text-slate-200">Water-Cement Ratio</TableHead>
                   <TableHead className="font-bold text-slate-700 dark:text-slate-200">Admixtures</TableHead>
                   <TableHead className="font-bold text-slate-700 dark:text-slate-200">Mix Description</TableHead>
+                  {customCols.map(c => (
+                    <TableHead key={c.id} className="font-bold text-slate-700 dark:text-slate-200">{c.name}</TableHead>
+                  ))}
                   <TableHead className="w-24 text-right font-bold text-slate-700 dark:text-slate-200">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs">Loading records...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7 + customCols.length} className="text-center py-8 text-muted-foreground text-xs">Loading records...</TableCell></TableRow>
                 ) : paginatedGrades.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground text-xs">No RMC grades logged.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7 + customCols.length} className="text-center py-8 text-muted-foreground text-xs">No RMC grades logged.</TableCell></TableRow>
                 ) : (
                   paginatedGrades.map((item) => (
                     <TableRow key={item.id}>
@@ -361,6 +384,9 @@ export default function RMCGrade() {
                       <TableCell className="text-xs font-mono font-medium">{item.waterCementRatio || "N/A"}</TableCell>
                       <TableCell className="text-xs">{item.admixture || "-"}</TableCell>
                       <TableCell className="text-xs max-w-[250px] truncate" title={item.description}>{item.description || "-"}</TableCell>
+                      {customCols.map(c => (
+                        <TableCell key={c.id} className="text-xs">{item.customData?.[c.key] ?? "-"}</TableCell>
+                      ))}
                       <TableCell className="text-right">
                         <div className="flex gap-1 justify-end">
                           <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleEdit(item)}>
@@ -442,6 +468,11 @@ export default function RMCGrade() {
                   <Label>Mix Specifications / Description</Label>
                   <Input value={editingItem.description} onChange={e => setEditingItem({...editingItem, description: e.target.value})} />
                 </div>
+                <CustomFieldInputs
+                  columns={customCols}
+                  values={editingItem.customData || {}}
+                  onChange={(key, value) => setEditingItem({ ...editingItem, customData: { ...(editingItem.customData || {}), [key]: value } })}
+                />
               </div>
               <DialogFooter className="pt-2">
                 <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
@@ -464,6 +495,12 @@ export default function RMCGrade() {
         }}
         onConfirm={handleConfirmImport}
         title="Import RMC Grades"
+      />
+      <ManageColumnsModal
+        isOpen={isManageColsOpen}
+        onClose={() => setIsManageColsOpen(false)}
+        entityName="RMCGrade"
+        onColumnsChange={loadData}
       />
     </div>
   )

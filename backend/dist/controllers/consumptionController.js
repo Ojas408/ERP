@@ -34,6 +34,7 @@ const createConsumption = async (req, res) => {
                 isRejected: isRejected === true || isRejected === 'true',
                 rejectionReason: rejectionReason || null,
                 date: date ? new Date(date) : new Date(),
+                customData: req.body.customData || undefined,
             },
         });
         res.json(consumption);
@@ -58,6 +59,7 @@ const updateConsumption = async (req, res) => {
                 isRejected: isRejected !== undefined ? (isRejected === true || isRejected === 'true') : undefined,
                 rejectionReason,
                 date: date ? new Date(date) : undefined,
+                customData: req.body.customData !== undefined ? req.body.customData : undefined,
             },
         });
         const consumption = await prisma_1.default.consumption.findFirst({ where: { id, tenantId } });

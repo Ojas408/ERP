@@ -1,4 +1,4 @@
-import { Bell, Search, User, ChevronDown, Calendar, MapPin, Moon, Sun, LogOut, Menu } from "lucide-react"
+import { Bell, Search, User, ChevronDown, Moon, Sun, LogOut, Menu } from "lucide-react"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
 import {
@@ -14,7 +14,6 @@ import { Badge } from "../ui/badge"
 import { Sheet, SheetContent, SheetTrigger } from "../ui/sheet"
 import { useTheme } from "next-themes"
 import { useAuth } from "../../contexts/AuthContext"
-import { useDateRange, dateRangePresets, formatDateRange } from "../../contexts/DateRangeContext"
 import { useSiteFilter } from "../../contexts/SiteFilterContext"
 import { SidebarNav } from "./sidebar-nav"
 
@@ -26,8 +25,7 @@ interface NavbarProps {
 export function Navbar({ activeModule, onModuleChange }: NavbarProps) {
   const { theme, setTheme } = useTheme()
   const { user, logout } = useAuth()
-  const { dateRange, setDateRange } = useDateRange()
-  const { sites, selectedSiteId, selectedSiteName, setSelectedSiteId, lowStockCount } = useSiteFilter()
+  const { lowStockCount } = useSiteFilter()
 
   const getInitials = (email: string) => {
     return email.substring(0, 2).toUpperCase()

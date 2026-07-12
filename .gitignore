@@ -24,3 +24,7 @@ backend.zip
 
 # Vite cache
 frontend/node_modules/.vite/
+
+# Build output
+frontend/dist/
+backend/dist/

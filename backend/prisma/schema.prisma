@@ -45,7 +45,6 @@ model Tenant {
   scraps             Scrap[]
   overheadEntries    OverheadEntry[]
   customColumns      CustomColumn[]
-  customData         Json?
 }
 
 model User {
@@ -74,6 +73,7 @@ model Production {
   towerName       String? // Building / tower / slab reference
   isRejected      Boolean  @default(false)
   rejectionReason String?
+  customData      Json?
   tenantId        String
   tenant          Tenant   @relation(fields: [tenantId], references: [id])
   createdAt       DateTime @default(now())
@@ -204,6 +204,7 @@ model Consumption {
   site            Site?    @relation(fields: [siteId], references: [id])
   isRejected      Boolean  @default(false)
   rejectionReason String?
+  customData      Json?
   tenantId        String
   tenant          Tenant   @relation(fields: [tenantId], references: [id])
   createdAt       DateTime @default(now())
@@ -374,6 +375,7 @@ model RMCGrade {
   waterCementRatio Float? // e.g. 0.45
   admixture        String? // e.g. superplasticizer
   description      String?
+  customData       Json?
   tenantId         String
   tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt        DateTime @default(now())
@@ -426,4 +428,6 @@ model CustomColumn {
   tenantId  String
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
   createdAt DateTime @default(now())
+
+  @@unique([tenantId, entity, key])
 }

@@ -2,7 +2,11 @@ const { PrismaClient } = require('@prisma/client');
 const XLSX = require('../frontend/node_modules/xlsx');
 
 const prisma = new PrismaClient();
-const tenantId = 'b2a856df-e634-434e-accf-e7a17dea19c0';
+const tenantId = process.env.SEED_TENANT_ID || process.argv[2];
+if (!tenantId) {
+  console.error('Provide a tenant id via SEED_TENANT_ID env var or as the first CLI argument.');
+  process.exit(1);
+}
 
 async function seedData(filePath, monthYearStr, plantName) {
   console.log(`Processing ${filePath} - ${plantName} - ${monthYearStr}`);

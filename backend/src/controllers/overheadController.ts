@@ -115,6 +115,7 @@ export const updateOverheadEntry = async (req: AuthRequest, res: Response) => {
         amount: amount !== undefined ? parseFloat(amount) : undefined,
         siteId,
         date: date ? new Date(date) : undefined,
+        customData: customData !== undefined ? customData : undefined,
       },
     });
     const entry = await prisma.overheadEntry.findFirst({ where: { id, tenantId }, include: { site: true } });

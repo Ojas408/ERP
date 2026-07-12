@@ -1,9 +1,10 @@
-import { Request, Response } from 'express';
+import { Response } from 'express';
 import prisma from '../lib/prisma';
+import { AuthRequest } from '../middleware/auth';
 
-export const getCustomColumns = async (req: Request, res: Response) => {
+export const getCustomColumns = async (req: AuthRequest, res: Response) => {
   try {
-    const tenantId = (req as any).user.tenantId;
+    const tenantId = req.user!.tenantId;
     const { entity } = req.query;
 
     const columns = await prisma.customColumn.findMany({
@@ -11,6 +12,7 @@ export const getCustomColumns = async (req: Request, res: Response) => {
         tenantId,
         ...(entity ? { entity: String(entity) } : {}),
       },
+      orderBy: { createdAt: 'asc' },
     });
 
     res.json(columns);
@@ -20,17 +22,33 @@ export const getCustomColumns = async (req: Request, res: Response) => {
   }
 };
 
-export const createCustomColumn = async (req: Request, res: Response) => {
+export const createCustomColumn = async (req: AuthRequest, res: Response) => {
   try {
-    const tenantId = (req as any).user.tenantId;
-    const { entity, name, key, type } = req.body;
+    const tenantId = req.user!.tenantId;
+    const { entity, name, type } = req.body;
+
+    if (!entity || !name || !type) {
+      return res.status(400).json({ message: 'entity, name and type are required' });
+    }
+
+    const key = String(name).trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    if (!key) {
+      return res.status(400).json({ message: 'name must contain at least one alphanumeric character' });
+    }
+
+    const existing = await prisma.customColumn.findFirst({
+      where: { tenantId, entity: String(entity), key },
+    });
+    if (existing) {
+      return res.status(409).json({ message: 'A column with this name already exists for this entity' });
+    }
 
     const column = await prisma.customColumn.create({
       data: {
-        entity,
-        name,
+        entity: String(entity),
+        name: String(name).trim(),
         key,
-        type,
+        type: String(type),
         tenantId,
       },
     });
@@ -42,10 +60,10 @@ export const createCustomColumn = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteCustomColumn = async (req: Request, res: Response) => {
+export const deleteCustomColumn = async (req: AuthRequest, res: Response) => {
   try {
-    const tenantId = (req as any).user.tenantId;
-    const { id } = req.params;
+    const tenantId = req.user!.tenantId;
+    const id = req.params.id as string;
 
     const column = await prisma.customColumn.findUnique({
       where: { id },

@@ -4,8 +4,8 @@ import { KPICard } from "../components/dashboard/kpi-card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
-import { Fuel, Package, Hammer, Mountain, Plus, Edit, Trash2, RefreshCw, Download, Upload, FileSpreadsheet , Settings2 } from "lucide-react"
-import { fetchConsumptions, createConsumption, fetchSites, deleteRecord, updateRecord , fetchCustomColumns } from "../services/api"
+import { Fuel, Package, Hammer, Mountain, Plus, Edit, Trash2, RefreshCw, Download, Upload, FileSpreadsheet, Settings2 } from "lucide-react"
+import { fetchConsumptions, createConsumption, fetchSites, deleteRecord, updateRecord, fetchCustomColumns } from "../services/api"
 import {
   Dialog,
   DialogContent,
@@ -21,6 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
 import { ManageColumnsModal } from "../components/ManageColumnsModal"
+import { CustomFieldInputs } from "../components/CustomFieldInputs"
+import { toast } from "sonner"
 
 export default function Consumption() {
   const [consumptions, setConsumptions] = useState<any[]>([])
@@ -56,7 +58,7 @@ export default function Consumption() {
       const [consData, siteData, colsData] = await Promise.all([
         fetchConsumptions(),
         fetchSites(),
-        fetchCustomColumns("Consumption")
+        fetchCustomColumns("Consumption").catch(() => [])
       ])
       setConsumptions(Array.isArray(consData) ? consData : [])
       setSites(Array.isArray(siteData) ? siteData : [])
@@ -75,6 +77,7 @@ export default function Consumption() {
         ...newCons,
         amount: parseFloat(newCons.amount) || 0
       })
+      toast.success("Consumption entry added")
       setIsAddOpen(false)
       setNewCons({
         material: "Diesel",
@@ -83,11 +86,13 @@ export default function Consumption() {
         siteId: "",
         date: new Date().toISOString().split('T')[0],
         isRejected: false,
-        rejectionReason: ""
+        rejectionReason: "",
+        customData: {}
       })
       loadData()
     } catch (error) {
       console.error("Failed to add consumption:", error)
+      toast.error("Failed to add consumption")
     }
   }
 
@@ -111,11 +116,13 @@ export default function Consumption() {
         ...editingItem,
         amount: parseFloat(editingItem.amount) || 0
       })
+      toast.success("Consumption updated")
       setIsEditOpen(false)
       setEditingItem(null)
       loadData()
     } catch (error) {
       console.error("Failed to update consumption:", error)
+      toast.error("Failed to update consumption")
     }
   }
 
@@ -137,7 +144,7 @@ export default function Consumption() {
 
   const handleDownloadTemplate = () => {
     downloadExcelTemplate(
-      ["date", "material", "amount", "unit", "siteId", "isRejected", "rejectionReason"],
+      ["date", "material", "amount", "unit", "siteId", "isRejected", "rejectionReason", ...customCols.map(c => c.key)],
       "consumption_import_template"
     )
   }
@@ -157,27 +164,35 @@ export default function Consumption() {
   }
 
   const handleConfirmImport = async (parsedRows: any[]) => {
-    try {
-      const formatted = parsedRows.map(row => ({
-        date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
-        material: String(row.material || "Diesel"),
-        amount: parseFloat(row.amount) || 0,
-        unit: String(row.unit || "Liters"),
-        siteId: String(row.siteId || ""),
-        isRejected: String(row.isRejected || "false").toLowerCase() === "true",
-        rejectionReason: String(row.rejectionReason || ""),
+    const formatted = parsedRows.map(row => ({
+      date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
+      material: String(row.material || "Diesel"),
+      amount: parseFloat(row.amount) || 0,
+      unit: String(row.unit || "Liters"),
+      siteId: row.siteId ? String(row.siteId) : null,
+      isRejected: String(row.isRejected || "false").toLowerCase() === "true",
+      rejectionReason: String(row.rejectionReason || ""),
       customData: customCols.reduce((acc: any, col: any) => ({ ...acc, [col.key]: row[col.key] }), {})
-      }))
-      
-      // Loop to create each one
-      for (const item of formatted) {
+    }))
+
+    let success = 0
+    let failed = 0
+    for (const item of formatted) {
+      try {
         await createConsumption(item)
+        success++
+      } catch (err) {
+        failed++
+        console.error("Failed to import consumption row", err)
       }
-      
-      setIsImportOpen(false)
-      loadData()
-    } catch (err) {
-      console.error("Import failed.", err)
+    }
+
+    setIsImportOpen(false)
+    loadData()
+    if (failed === 0) {
+      toast.success(`Imported ${success} record(s)`)
+    } else {
+      toast.error(`Imported ${success}, failed ${failed}. Check console for details.`)
     }
   }
 
@@ -187,9 +202,11 @@ export default function Consumption() {
       material: c.material,
       amount: c.amount,
       unit: c.unit,
+      siteId: c.siteId || "",
       site: c.site?.name || 'N/A',
       status: c.isRejected ? "Wasted / Rejected" : "Consumed",
-      rejectionReason: c.rejectionReason || ""
+      rejectionReason: c.rejectionReason || "",
+      ...(c.customData || {})
     }))
     exportToExcel(data, "consumption_report")
   }
@@ -205,6 +222,10 @@ export default function Consumption() {
           <Button variant="outline" className="text-xs h-9" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={() => setIsManageColsOpen(true)}>
+            <Settings2 className="h-4 w-4 mr-2" />
+            Columns
           </Button>
           <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleDownloadTemplate}>
             <Download className="h-4 w-4 mr-2" />
@@ -269,6 +290,11 @@ export default function Consumption() {
                       <Input id="cons-rejectionReason" placeholder="Spillage / Expired cement / Damaged steel" value={newCons.rejectionReason} onChange={e => setNewCons({...newCons, rejectionReason: e.target.value})} required />
                     </div>
                   )}
+                  <CustomFieldInputs
+                    columns={customCols}
+                    values={newCons.customData}
+                    onChange={(key, value) => setNewCons({ ...newCons, customData: { ...newCons.customData, [key]: value } })}
+                  />
                 </div>
                 <DialogFooter><Button type="submit">Add Entry</Button></DialogFooter>
               </form>
@@ -312,7 +338,7 @@ export default function Consumption() {
                     <TableCell className="text-xs">{item.unit}</TableCell>
                     <TableCell className="text-xs">{item.site?.name || 'N/A'}</TableCell>
                     {customCols.map(c => (
-                      <TableCell key={c.id} className="text-xs">{item.customData?.[c.key] || "-"}</TableCell>
+                      <TableCell key={c.id} className="text-xs">{item.customData?.[c.key] ?? "-"}</TableCell>
                     ))}
                     <TableCell>
                       {item.isRejected ? (
@@ -386,6 +412,11 @@ export default function Consumption() {
                     <Input id="edit-cons-rejectionReason" value={editingItem.rejectionReason} onChange={e => setEditingItem({...editingItem, rejectionReason: e.target.value})} required />
                   </div>
                 )}
+                <CustomFieldInputs
+                  columns={customCols}
+                  values={editingItem.customData || {}}
+                  onChange={(key, value) => setEditingItem({ ...editingItem, customData: { ...(editingItem.customData || {}), [key]: value } })}
+                />
               </div>
               <DialogFooter><Button type="submit">Update Entry</Button></DialogFooter>
             </form>
@@ -398,7 +429,7 @@ export default function Consumption() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         data={importData}
-        headers={["date", "material", "amount", "unit", "siteId", "isRejected", "rejectionReason"]}
+        headers={["date", "material", "amount", "unit", "siteId", "isRejected", "rejectionReason", ...customCols.map(c => c.key)]}
         validationRules={(row, i) => {
           const errs: string[] = []
           if (!row.material) errs.push(`Row ${i + 1}: material is required`)
@@ -407,6 +438,12 @@ export default function Consumption() {
         }}
         onConfirm={handleConfirmImport}
         title="Import Consumption Records"
+      />
+      <ManageColumnsModal
+        isOpen={isManageColsOpen}
+        onClose={() => setIsManageColsOpen(false)}
+        entityName="Consumption"
+        onColumnsChange={loadData}
       />
     </div>
   )
