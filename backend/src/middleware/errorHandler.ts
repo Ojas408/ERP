@@ -56,7 +56,7 @@ function resolveError(err: unknown): ResolvedError {
  * server-side (so nothing is silently swallowed) and returns a consistent JSON
  * response with an appropriate status code.
  */
-export function errorHandler(err: unknown, req: Request, res: Response, _next: NextFunction) {
+export function errorHandler(err: unknown, req: Request, res: Response, next: NextFunction) {
   const { statusCode, message, isOperational } = resolveError(err);
 
   // Always log the full error with request context so failures are never silent.
@@ -67,8 +67,10 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     console.warn(`[warn] ${logContext}: ${message}`);
   }
 
+  // Headers already sent (e.g. mid-stream failure): delegate to Express's
+  // default handler so it closes the connection properly.
   if (res.headersSent) {
-    return;
+    return next(err);
   }
 
   // Never leak internal error details to clients for unexpected server errors.
