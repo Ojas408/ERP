@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 
-export const getCustomColumns = async (req: Request, res: Response) => {
+export const getCustomColumns = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = (req as any).user.tenantId;
     const { entity } = req.query;
@@ -15,12 +15,11 @@ export const getCustomColumns = async (req: Request, res: Response) => {
 
     res.json(columns);
   } catch (error) {
-    console.error('Get custom columns error:', error);
-    res.status(500).json({ message: 'Failed to fetch custom columns' });
+    next(error);
   }
 };
 
-export const createCustomColumn = async (req: Request, res: Response) => {
+export const createCustomColumn = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = (req as any).user.tenantId;
     const { entity, name, key, type } = req.body;
@@ -37,18 +36,17 @@ export const createCustomColumn = async (req: Request, res: Response) => {
 
     res.status(201).json(column);
   } catch (error) {
-    console.error('Create custom column error:', error);
-    res.status(500).json({ message: 'Failed to create custom column' });
+    next(error);
   }
 };
 
-export const deleteCustomColumn = async (req: Request, res: Response) => {
+export const deleteCustomColumn = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const tenantId = (req as any).user.tenantId;
     const { id } = req.params;
 
     const column = await prisma.customColumn.findUnique({
-      where: { id },
+      where: { id: String(id) },
     });
 
     if (!column || column.tenantId !== tenantId) {
@@ -56,12 +54,11 @@ export const deleteCustomColumn = async (req: Request, res: Response) => {
     }
 
     await prisma.customColumn.delete({
-      where: { id },
+      where: { id: String(id) },
     });
 
     res.json({ message: 'Custom column deleted successfully' });
   } catch (error) {
-    console.error('Delete custom column error:', error);
-    res.status(500).json({ message: 'Failed to delete custom column' });
+    next(error);
   }
 };

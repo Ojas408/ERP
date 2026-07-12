@@ -1,9 +1,9 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/audit';
 
-export const getRmcGrades = async (req: AuthRequest, res: Response) => {
+export const getRmcGrades = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const grades = await prisma.rMCGrade.findMany({
@@ -12,11 +12,11 @@ export const getRmcGrades = async (req: AuthRequest, res: Response) => {
     });
     res.json(grades);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching RMC grades' });
+    next(error);
   }
 };
 
-export const createRmcGrade = async (req: AuthRequest, res: Response) => {
+export const createRmcGrade = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const { grade, mixRatio, cementContent, waterCementRatio, admixture, description } = req.body;
@@ -36,12 +36,11 @@ export const createRmcGrade = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'CREATE', 'RMCGrade', `Created RMC Grade: ${rmcGrade.grade}`);
     res.status(201).json(rmcGrade);
   } catch (error) {
-    console.error('Error creating RMC grade:', error);
-    res.status(500).json({ message: 'Error creating RMC grade' });
+    next(error);
   }
 };
 
-export const updateRmcGrade = async (req: AuthRequest, res: Response) => {
+export const updateRmcGrade = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -63,11 +62,11 @@ export const updateRmcGrade = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'UPDATE', 'RMCGrade', `Updated RMC Grade ID: ${id}`);
     res.json(rmcGrade);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating RMC grade' });
+    next(error);
   }
 };
 
-export const deleteRmcGrade = async (req: AuthRequest, res: Response) => {
+export const deleteRmcGrade = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -76,6 +75,6 @@ export const deleteRmcGrade = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'DELETE', 'RMCGrade', `Deleted RMC Grade ID: ${id}`);
     res.json({ message: 'RMC grade deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting RMC grade' });
+    next(error);
   }
 };

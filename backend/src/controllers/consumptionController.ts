@@ -1,8 +1,8 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 
-export const getConsumptions = async (req: AuthRequest, res: Response) => {
+export const getConsumptions = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const consumptions = await prisma.consumption.findMany({
@@ -12,11 +12,11 @@ export const getConsumptions = async (req: AuthRequest, res: Response) => {
     });
     res.json(consumptions);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch consumptions' });
+    next(error);
   }
 };
 
-export const createConsumption = async (req: AuthRequest, res: Response) => {
+export const createConsumption = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const { material, amount, unit, siteId, date, isRejected, rejectionReason } = req.body;
@@ -35,11 +35,11 @@ export const createConsumption = async (req: AuthRequest, res: Response) => {
     });
     res.json(consumption);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create consumption' });
+    next(error);
   }
 };
 
-export const updateConsumption = async (req: AuthRequest, res: Response) => {
+export const updateConsumption = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const id = req.params.id as string;
@@ -60,17 +60,17 @@ export const updateConsumption = async (req: AuthRequest, res: Response) => {
     const consumption = await prisma.consumption.findFirst({ where: { id, tenantId } });
     res.json(consumption);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update consumption' });
+    next(error);
   }
 };
 
-export const deleteConsumption = async (req: AuthRequest, res: Response) => {
+export const deleteConsumption = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const id = req.params.id as string;
     await prisma.consumption.deleteMany({ where: { id, tenantId } });
     res.json({ message: 'Consumption deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete consumption' });
+    next(error);
   }
 };

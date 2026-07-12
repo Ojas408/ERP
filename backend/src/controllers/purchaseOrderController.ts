@@ -1,8 +1,8 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 
-export const getPurchaseOrders = async (req: AuthRequest, res: Response) => {
+export const getPurchaseOrders = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const orders = await prisma.purchaseOrder.findMany({
@@ -12,11 +12,11 @@ export const getPurchaseOrders = async (req: AuthRequest, res: Response) => {
     });
     res.json(orders);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching purchase orders' });
+    next(error);
   }
 };
 
-export const createPurchaseOrder = async (req: AuthRequest, res: Response) => {
+export const createPurchaseOrder = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { orderNumber, date, vendorId, totalAmount, status, items } = req.body;
   try {
@@ -33,11 +33,11 @@ export const createPurchaseOrder = async (req: AuthRequest, res: Response) => {
     });
     res.status(201).json(order);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating purchase order' });
+    next(error);
   }
 };
 
-export const updatePurchaseOrder = async (req: AuthRequest, res: Response) => {
+export const updatePurchaseOrder = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const id = req.params.id as string;
   const { orderNumber, date, vendorId, totalAmount, status, items } = req.body;
@@ -56,17 +56,17 @@ export const updatePurchaseOrder = async (req: AuthRequest, res: Response) => {
     const order = await prisma.purchaseOrder.findFirst({ where: { id, tenantId } });
     res.json(order);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating purchase order' });
+    next(error);
   }
 };
 
-export const deletePurchaseOrder = async (req: AuthRequest, res: Response) => {
+export const deletePurchaseOrder = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const id = req.params.id as string;
   try {
     await prisma.purchaseOrder.deleteMany({ where: { id, tenantId } });
     res.json({ message: 'Purchase order deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting purchase order' });
+    next(error);
   }
 };

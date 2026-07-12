@@ -1,9 +1,9 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/audit';
 
-export const getScraps = async (req: AuthRequest, res: Response) => {
+export const getScraps = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const scraps = await prisma.scrap.findMany({
@@ -13,11 +13,11 @@ export const getScraps = async (req: AuthRequest, res: Response) => {
     });
     res.json(scraps);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching scrap records' });
+    next(error);
   }
 };
 
-export const createScrap = async (req: AuthRequest, res: Response) => {
+export const createScrap = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const { date, materialType, quantity, unit, siteId, saleStatus, saleValue, buyerName, remarks } = req.body;
@@ -39,12 +39,11 @@ export const createScrap = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'CREATE', 'Scrap', `Created scrap record: ${scrap.materialType} (${scrap.quantity} ${scrap.unit})`);
     res.status(201).json(scrap);
   } catch (error) {
-    console.error('Error creating scrap entry:', error);
-    res.status(500).json({ message: 'Error creating scrap record' });
+    next(error);
   }
 };
 
-export const updateScrap = async (req: AuthRequest, res: Response) => {
+export const updateScrap = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -68,11 +67,11 @@ export const updateScrap = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'UPDATE', 'Scrap', `Updated scrap record ID: ${id}`);
     res.json(scrap);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating scrap record' });
+    next(error);
   }
 };
 
-export const deleteScrap = async (req: AuthRequest, res: Response) => {
+export const deleteScrap = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -81,6 +80,6 @@ export const deleteScrap = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'DELETE', 'Scrap', `Deleted scrap record ID: ${id}`);
     res.json({ message: 'Scrap record deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting scrap record' });
+    next(error);
   }
 };

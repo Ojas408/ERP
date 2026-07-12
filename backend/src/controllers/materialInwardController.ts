@@ -1,9 +1,9 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/audit';
 
-export const getMaterialInwards = async (req: AuthRequest, res: Response) => {
+export const getMaterialInwards = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const inwards = await prisma.materialInward.findMany({
@@ -13,11 +13,11 @@ export const getMaterialInwards = async (req: AuthRequest, res: Response) => {
     });
     res.json(inwards);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching material inward records' });
+    next(error);
   }
 };
 
-export const createMaterialInward = async (req: AuthRequest, res: Response) => {
+export const createMaterialInward = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const data = req.body;
@@ -64,12 +64,11 @@ export const createMaterialInward = async (req: AuthRequest, res: Response) => {
       res.status(201).json(inward);
     }
   } catch (error) {
-    console.error('Error creating inward entry:', error);
-    res.status(500).json({ message: 'Error creating material inward log' });
+    next(error);
   }
 };
 
-export const updateMaterialInward = async (req: AuthRequest, res: Response) => {
+export const updateMaterialInward = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -95,11 +94,11 @@ export const updateMaterialInward = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'UPDATE', 'MaterialInward', `Updated inward ID: ${id}`);
     res.json(inward);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating material inward log' });
+    next(error);
   }
 };
 
-export const deleteMaterialInward = async (req: AuthRequest, res: Response) => {
+export const deleteMaterialInward = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -108,6 +107,6 @@ export const deleteMaterialInward = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'DELETE', 'MaterialInward', `Deleted inward ID: ${id}`);
     res.json({ message: 'Material inward log deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting material inward log' });
+    next(error);
   }
 };

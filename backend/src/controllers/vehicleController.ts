@@ -1,9 +1,9 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/audit';
 
-export const getVehicles = async (req: AuthRequest, res: Response) => {
+export const getVehicles = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const vehicles = await prisma.vehicle.findMany({ 
@@ -12,11 +12,11 @@ export const getVehicles = async (req: AuthRequest, res: Response) => {
     });
     res.json(vehicles);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching vehicles' });
+    next(error);
   }
 };
 
-export const createVehicle = async (req: AuthRequest, res: Response) => {
+export const createVehicle = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const data = req.body;
@@ -55,12 +55,11 @@ export const createVehicle = async (req: AuthRequest, res: Response) => {
       res.status(201).json(vehicle);
     }
   } catch (error) {
-    console.error('Error creating vehicle:', error);
-    res.status(500).json({ message: 'Error creating vehicle' });
+    next(error);
   }
 };
 
-export const updateVehicle = async (req: AuthRequest, res: Response) => {
+export const updateVehicle = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -82,11 +81,11 @@ export const updateVehicle = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'UPDATE', 'Vehicle', `Updated vehicle ID: ${id}`);
     res.json(vehicle);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating vehicle' });
+    next(error);
   }
 };
 
-export const deleteVehicle = async (req: AuthRequest, res: Response) => {
+export const deleteVehicle = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -95,6 +94,6 @@ export const deleteVehicle = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'DELETE', 'Vehicle', `Deleted vehicle ID: ${id}`);
     res.json({ message: 'Vehicle deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting vehicle' });
+    next(error);
   }
 };

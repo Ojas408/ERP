@@ -1,9 +1,9 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/audit';
 
-export const getOverheadEntries = async (req: AuthRequest, res: Response) => {
+export const getOverheadEntries = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const entries = await prisma.overheadEntry.findMany({
@@ -13,11 +13,11 @@ export const getOverheadEntries = async (req: AuthRequest, res: Response) => {
     });
     res.json(entries);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching overhead entries' });
+    next(error);
   }
 };
 
-export const getOverheadSummary = async (req: AuthRequest, res: Response) => {
+export const getOverheadSummary = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const [entries, expenses, employees] = await Promise.all([
@@ -67,12 +67,11 @@ export const getOverheadSummary = async (req: AuthRequest, res: Response) => {
       slabs: categoryTotals['Slabs'] || { quantity: 0, amount: 0, unit: 'sqm' },
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error building overhead summary' });
+    next(error);
   }
 };
 
-export const createOverheadEntry = async (req: AuthRequest, res: Response) => {
+export const createOverheadEntry = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const data = req.body;
@@ -94,12 +93,11 @@ export const createOverheadEntry = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'CREATE', 'OverheadEntry', `Created overhead: ${entry.category}`);
     res.status(201).json(entry);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Error creating overhead entry' });
+    next(error);
   }
 };
 
-export const updateOverheadEntry = async (req: AuthRequest, res: Response) => {
+export const updateOverheadEntry = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -121,11 +119,11 @@ export const updateOverheadEntry = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'UPDATE', 'OverheadEntry', `Updated overhead ID: ${id}`);
     res.json(entry);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating overhead entry' });
+    next(error);
   }
 };
 
-export const deleteOverheadEntry = async (req: AuthRequest, res: Response) => {
+export const deleteOverheadEntry = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -134,6 +132,6 @@ export const deleteOverheadEntry = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'DELETE', 'OverheadEntry', `Deleted overhead ID: ${id}`);
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting overhead entry' });
+    next(error);
   }
 };

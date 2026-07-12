@@ -1,9 +1,9 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/audit';
 
-export const getChallans = async (req: AuthRequest, res: Response) => {
+export const getChallans = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const challans = await prisma.challan.findMany({
@@ -13,11 +13,11 @@ export const getChallans = async (req: AuthRequest, res: Response) => {
     });
     res.json(challans);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching challans' });
+    next(error);
   }
 };
 
-export const createChallan = async (req: AuthRequest, res: Response) => {
+export const createChallan = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const data = req.body;
@@ -56,12 +56,11 @@ export const createChallan = async (req: AuthRequest, res: Response) => {
       res.status(201).json(challan);
     }
   } catch (error) {
-    console.error('Error creating challan:', error);
-    res.status(500).json({ message: 'Error creating challan' });
+    next(error);
   }
 };
 
-export const updateChallan = async (req: AuthRequest, res: Response) => {
+export const updateChallan = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -83,11 +82,11 @@ export const updateChallan = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'UPDATE', 'Challan', `Updated challan ID: ${id}`);
     res.json(challan);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating challan' });
+    next(error);
   }
 };
 
-export const deleteChallan = async (req: AuthRequest, res: Response) => {
+export const deleteChallan = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
@@ -96,6 +95,6 @@ export const deleteChallan = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'DELETE', 'Challan', `Deleted challan ID: ${id}`);
     res.json({ message: 'Challan deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting challan' });
+    next(error);
   }
 };

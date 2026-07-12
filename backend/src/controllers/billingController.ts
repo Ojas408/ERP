@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import Stripe from 'stripe';
 import prisma from '../lib/prisma';
@@ -7,7 +7,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_mock', {
   apiVersion: '2025-01-27.acacia' as any,
 });
 
-export const createCheckoutSession = async (req: AuthRequest, res: Response) => {
+const isProd = (process.env.NODE_ENV || 'development') === 'production';
+
+export const createCheckoutSession = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const { planName } = req.body; // e.g. "pro" or "enterprise"
@@ -39,44 +41,52 @@ export const createCheckoutSession = async (req: AuthRequest, res: Response) => 
 
     res.json({ url: session.url });
   } catch (error) {
-    console.error('Error creating checkout session:', error);
-    res.status(500).json({ message: 'Error creating checkout session' });
+    next(error);
   }
 };
 
-export const handleStripeWebhook = async (req: Request, res: Response) => {
+export const handleStripeWebhook = async (req: Request, res: Response, next: NextFunction) => {
   const sig = req.headers['stripe-signature'];
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET || 'whsec_mock';
 
-  let event;
+  let event: any;
 
   try {
-    // In production, we need the raw body. 
+    // In production, we need the raw body.
     // Assuming express.json() is used globally, we might need a workaround for stripe webhooks.
     // For now, this is a placeholder structure.
     event = stripe.webhooks.constructEvent(req.body, sig as string, endpointSecret);
   } catch (err: any) {
-    // res.status(400).send(`Webhook Error: ${err.message}`);
-    // Fallback for mock environments:
+    // A failed signature check means the payload cannot be trusted. In production we must
+    // reject it outright rather than silently accepting an unverified body, which would let
+    // anyone forge webhook events. The unverified fallback is only for local/mock testing.
+    if (isProd) {
+      return res.status(400).json({ message: `Webhook signature verification failed: ${err.message}` });
+    }
+    console.warn('Stripe webhook signature verification failed; accepting unverified body (non-production only).');
     event = req.body;
   }
 
-  // Handle the event
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as any;
-    const tenantId = session.client_reference_id;
-    const customerId = session.customer as string;
+  try {
+    // Handle the event
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as any;
+      const tenantId = session.client_reference_id;
+      const customerId = session.customer as string;
 
-    if (tenantId) {
-      await prisma.tenant.update({
-        where: { id: tenantId },
-        data: {
-          stripeCustomerId: customerId,
-          subscriptionPlan: 'pro', // Ideally map from line items
-        },
-      });
+      if (tenantId) {
+        await prisma.tenant.update({
+          where: { id: tenantId },
+          data: {
+            stripeCustomerId: customerId,
+            subscriptionPlan: 'pro', // Ideally map from line items
+          },
+        });
+      }
     }
-  }
 
-  res.json({ received: true });
+    res.json({ received: true });
+  } catch (error) {
+    next(error);
+  }
 };

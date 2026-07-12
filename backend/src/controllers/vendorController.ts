@@ -1,18 +1,18 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 
-export const getVendors = async (req: AuthRequest, res: Response) => {
+export const getVendors = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const vendors = await prisma.vendor.findMany({ where: { tenantId } });
     res.json(vendors);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching vendors' });
+    next(error);
   }
 };
 
-export const createVendor = async (req: AuthRequest, res: Response) => {
+export const createVendor = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { name, contact, category } = req.body;
   try {
@@ -21,11 +21,11 @@ export const createVendor = async (req: AuthRequest, res: Response) => {
     });
     res.status(201).json(vendor);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating vendor' });
+    next(error);
   }
 };
 
-export const updateVendor = async (req: AuthRequest, res: Response) => {
+export const updateVendor = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const id = req.params.id as string;
   const { name, contact, category } = req.body;
@@ -37,17 +37,17 @@ export const updateVendor = async (req: AuthRequest, res: Response) => {
     const vendor = await prisma.vendor.findFirst({ where: { id, tenantId } });
     res.json(vendor);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating vendor' });
+    next(error);
   }
 };
 
-export const deleteVendor = async (req: AuthRequest, res: Response) => {
+export const deleteVendor = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const id = req.params.id as string;
   try {
     await prisma.vendor.deleteMany({ where: { id, tenantId } });
     res.json({ message: 'Vendor deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting vendor' });
+    next(error);
   }
 };

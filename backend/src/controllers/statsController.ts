@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 
@@ -7,7 +7,7 @@ const chartColors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#14
 const formatChartDate = (date: Date) =>
   date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
-export const getDashboardStats = async (req: AuthRequest, res: Response) => {
+export const getDashboardStats = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const todayStart = new Date();
@@ -110,6 +110,6 @@ export const getDashboardStats = async (req: AuthRequest, res: Response) => {
       openExpensesCount,
     });
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching dashboard stats' });
+    next(error);
   }
 };

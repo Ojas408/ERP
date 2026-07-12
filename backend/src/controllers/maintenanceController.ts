@@ -1,8 +1,8 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 
-export const getMaintenances = async (req: AuthRequest, res: Response) => {
+export const getMaintenances = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const maintenances = await prisma.maintenance.findMany({
@@ -12,11 +12,11 @@ export const getMaintenances = async (req: AuthRequest, res: Response) => {
     });
     res.json(maintenances);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch maintenances' });
+    next(error);
   }
 };
 
-export const createMaintenance = async (req: AuthRequest, res: Response) => {
+export const createMaintenance = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const { vehicleId, type, cost, description, date, status } = req.body;
@@ -51,11 +51,11 @@ export const createMaintenance = async (req: AuthRequest, res: Response) => {
 
     res.json(maintenance);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to create maintenance' });
+    next(error);
   }
 };
 
-export const updateMaintenance = async (req: AuthRequest, res: Response) => {
+export const updateMaintenance = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const id = req.params.id as string;
@@ -74,17 +74,17 @@ export const updateMaintenance = async (req: AuthRequest, res: Response) => {
     const maintenance = await prisma.maintenance.findFirst({ where: { id, tenantId } });
     res.json(maintenance);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update maintenance' });
+    next(error);
   }
 };
 
-export const deleteMaintenance = async (req: AuthRequest, res: Response) => {
+export const deleteMaintenance = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const id = req.params.id as string;
     await prisma.maintenance.deleteMany({ where: { id, tenantId } });
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete maintenance' });
+    next(error);
   }
 };

@@ -1,19 +1,19 @@
-import { Response } from 'express';
+import { NextFunction, Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/audit';
 
-export const getInventory = async (req: AuthRequest, res: Response) => {
+export const getInventory = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const inventory = await prisma.inventory.findMany({ where: { tenantId } });
     res.json(inventory);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching inventory' });
+    next(error);
   }
 };
 
-export const createInventoryItem = async (req: AuthRequest, res: Response) => {
+export const createInventoryItem = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const data = req.body;
@@ -50,12 +50,11 @@ export const createInventoryItem = async (req: AuthRequest, res: Response) => {
       res.status(201).json(item);
     }
   } catch (error) {
-    console.error('Error creating inventory item:', error);
-    res.status(500).json({ message: 'Error creating inventory item' });
+    next(error);
   }
 };
 
-export const deleteInventoryItem = async (req: AuthRequest, res: Response) => {
+export const deleteInventoryItem = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const { userId, email } = req.user!;
@@ -64,11 +63,11 @@ export const deleteInventoryItem = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'DELETE', 'Inventory', `Deleted inventory item ID: ${id}`);
     res.json({ message: 'Deleted successfully' });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to delete inventory item' });
+    next(error);
   }
 };
 
-export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
+export const updateInventoryItem = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const tenantId = req.user!.tenantId;
     const { userId, email } = req.user!;
@@ -89,6 +88,6 @@ export const updateInventoryItem = async (req: AuthRequest, res: Response) => {
     await logActivity(userId, email, tenantId, 'UPDATE', 'Inventory', `Updated inventory item ID: ${id}`);
     res.json(item);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to update inventory item' });
+    next(error);
   }
 };
