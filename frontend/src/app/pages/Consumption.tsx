@@ -4,8 +4,8 @@ import { KPICard } from "../components/dashboard/kpi-card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
-import { Fuel, Package, Hammer, Mountain, Plus, Edit, Trash2, RefreshCw, Download, Upload, FileSpreadsheet } from "lucide-react"
-import { fetchConsumptions, createConsumption, fetchSites, deleteRecord, updateRecord } from "../services/api"
+import { Fuel, Package, Hammer, Mountain, Plus, Edit, Trash2, RefreshCw, Download, Upload, FileSpreadsheet , Settings2 } from "lucide-react"
+import { fetchConsumptions, createConsumption, fetchSites, deleteRecord, updateRecord , fetchCustomColumns } from "../services/api"
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
+import { ManageColumnsModal } from "../components/ManageColumnsModal"
 
 export default function Consumption() {
   const [consumptions, setConsumptions] = useState<any[]>([])
@@ -35,12 +36,15 @@ export default function Consumption() {
     siteId: "",
     date: new Date().toISOString().split('T')[0],
     isRejected: false,
-    rejectionReason: ""
+    rejectionReason: "",
+    customData: {} as Record<string, any>
   })
 
   // SheetJS Import Preview States
   const [importData, setImportData] = useState<any[]>([])
   const [isImportOpen, setIsImportOpen] = useState(false)
+  const [customCols, setCustomCols] = useState<any[]>([])
+  const [isManageColsOpen, setIsManageColsOpen] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -49,12 +53,14 @@ export default function Consumption() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [consData, siteData] = await Promise.all([
+      const [consData, siteData, colsData] = await Promise.all([
         fetchConsumptions(),
-        fetchSites()
+        fetchSites(),
+        fetchCustomColumns("Consumption")
       ])
       setConsumptions(Array.isArray(consData) ? consData : [])
       setSites(Array.isArray(siteData) ? siteData : [])
+      setCustomCols(Array.isArray(colsData) ? colsData : [])
     } catch (error) {
       console.error("Failed to load consumption data:", error)
     } finally {
@@ -91,7 +97,8 @@ export default function Consumption() {
       date: new Date(item.date).toISOString().split('T')[0],
       amount: String(item.amount || 0),
       isRejected: item.isRejected || false,
-      rejectionReason: item.rejectionReason || ""
+      rejectionReason: item.rejectionReason || "",
+      customData: item.customData || {}
     })
     setIsEditOpen(true)
   }
@@ -158,7 +165,8 @@ export default function Consumption() {
         unit: String(row.unit || "Liters"),
         siteId: String(row.siteId || ""),
         isRejected: String(row.isRejected || "false").toLowerCase() === "true",
-        rejectionReason: String(row.rejectionReason || "")
+        rejectionReason: String(row.rejectionReason || ""),
+      customData: customCols.reduce((acc: any, col: any) => ({ ...acc, [col.key]: row[col.key] }), {})
       }))
       
       // Loop to create each one
@@ -288,6 +296,9 @@ export default function Consumption() {
                   <TableHead>Amount</TableHead>
                   <TableHead>Unit</TableHead>
                   <TableHead>Site</TableHead>
+                  {customCols.map(c => (
+                    <TableHead key={c.id}>{c.name}</TableHead>
+                  ))}
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -300,6 +311,9 @@ export default function Consumption() {
                     <TableCell className="text-xs">{(item.amount || 0).toLocaleString()}</TableCell>
                     <TableCell className="text-xs">{item.unit}</TableCell>
                     <TableCell className="text-xs">{item.site?.name || 'N/A'}</TableCell>
+                    {customCols.map(c => (
+                      <TableCell key={c.id} className="text-xs">{item.customData?.[c.key] || "-"}</TableCell>
+                    ))}
                     <TableCell>
                       {item.isRejected ? (
                         <Badge variant="destructive" className="text-[9px] h-5 uppercase font-bold" title={item.rejectionReason}>

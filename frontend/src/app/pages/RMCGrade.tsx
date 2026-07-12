@@ -19,13 +19,13 @@ import {
   Download,
   Upload,
   FileSpreadsheet
-} from "lucide-react"
+, Settings2 } from "lucide-react"
 import { 
   fetchRmcGrades, 
   createRmcGrade, 
   deleteRecord, 
   updateRecord 
-} from "../services/api"
+, fetchCustomColumns } from "../services/api"
 import {
   Dialog,
   DialogContent,
@@ -38,6 +38,7 @@ import {
 import { toast } from "sonner"
 import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
+import { ManageColumnsModal } from "../components/ManageColumnsModal"
 
 export default function RMCGrade() {
   const [grades, setGrades] = useState<any[]>([])
@@ -68,6 +69,8 @@ export default function RMCGrade() {
   // SheetJS Import Preview States
   const [importData, setImportData] = useState<any[]>([])
   const [isImportOpen, setIsImportOpen] = useState(false)
+  const [customCols, setCustomCols] = useState<any[]>([])
+  const [isManageColsOpen, setIsManageColsOpen] = useState(false)
 
   useEffect(() => {
     loadData()
