@@ -27,6 +27,7 @@ const auth_1 = require("../middleware/auth");
 const rbac_1 = require("../middleware/rbac");
 const upload_1 = __importDefault(require("./upload"));
 const masterController_1 = require("../controllers/masterController");
+const customColumnController_1 = require("../controllers/customColumnController");
 const router = (0, express_1.Router)();
 // Apply authentication to all API routes below
 router.use(auth_1.authenticate);
@@ -133,4 +134,8 @@ router.get('/overhead/summary', (0, rbac_1.authorize)(['overhead-report', 'repor
 router.post('/overhead', (0, rbac_1.authorize)(['overhead-report']), overheadController_1.createOverheadEntry);
 router.put('/overhead/:id', (0, rbac_1.authorize)(['overhead-report']), overheadController_1.updateOverheadEntry);
 router.delete('/overhead/:id', (0, rbac_1.authorize)(['overhead-report']), overheadController_1.deleteOverheadEntry);
+// Custom Columns — readable by any authenticated user; only admins can define/remove
+router.get('/custom-columns', customColumnController_1.getCustomColumns);
+router.post('/custom-columns', (0, rbac_1.authorize)(['custom-columns']), customColumnController_1.createCustomColumn);
+router.delete('/custom-columns/:id', (0, rbac_1.authorize)(['custom-columns']), customColumnController_1.deleteCustomColumn);
 exports.default = router;

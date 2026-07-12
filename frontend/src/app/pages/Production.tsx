@@ -8,6 +8,8 @@ import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
 import { Factory, TrendingUp, Target, Activity, Upload, Download, Plus, Edit, Trash2, Eye, RefreshCw, FileSpreadsheet, Settings2 } from "lucide-react"
 import { fetchProductions, createProduction, fetchSites, fetchRmcGrades, deleteRecord, updateRecord, fetchCustomColumns } from "../services/api"
+import { CustomFieldInputs } from "../components/CustomFieldInputs"
+import { toast } from "sonner"
 import {
   Dialog,
   DialogContent,
@@ -64,7 +66,7 @@ export default function Production() {
         fetchProductions(),
         fetchSites(),
         fetchRmcGrades(),
-        fetchCustomColumns("Production")
+        fetchCustomColumns("Production").catch(() => [])
       ])
       setProductions(Array.isArray(prodData) ? prodData : [])
       setSites(Array.isArray(siteData) ? siteData : [])
@@ -86,6 +88,7 @@ export default function Production() {
         quality: newProd.grade || newProd.quality,
         date: new Date(newProd.date).toISOString()
       })
+      toast.success("Production entry added")
       setIsAddOpen(false)
       setNewProd({
         siteId: "",
@@ -98,11 +101,13 @@ export default function Production() {
         quality: "",
         towerName: "",
         isRejected: false,
-        rejectionReason: ""
+        rejectionReason: "",
+        customData: {}
       })
       loadData()
     } catch (error) {
       console.error("Failed to add production:", error)
+      toast.error("Failed to add production")
     }
   }
 
@@ -140,11 +145,13 @@ export default function Production() {
         rejectionReason: editingItem.rejectionReason,
         customData: editingItem.customData
       })
+      toast.success("Production updated")
       setIsEditOpen(false)
       setEditingItem(null)
       loadData()
     } catch (error) {
       console.error("Failed to update production:", error)
+      toast.error("Failed to update production")
     }
   }
 
@@ -180,30 +187,39 @@ export default function Production() {
   }
 
   const handleConfirmImport = async (parsedRows: any[]) => {
-    try {
-      const formatted = parsedRows.map(row => ({
-        siteId: String(row.siteId || ""),
-        date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
-        amount: parseFloat(row.amount) || 0,
-        unit: String(row.unit || "cum"),
-        grade: String(row.grade || ""),
-        quality: String(row.grade || ""),
-        productionType: String(row.productionType || "Transit Mixture"),
-        towerName: String(row.towerName || ""),
-        notes: String(row.notes || ""),
-        isRejected: String(row.isRejected || "false").toLowerCase() === "true",
-        rejectionReason: String(row.rejectionReason || ""),
-        customData: customCols.reduce((acc: any, col: any) => ({ ...acc, [col.key]: row[col.key] }), {})
-      }))
-      
-      for (const item of formatted) {
+    const formatted = parsedRows.map(row => ({
+      siteId: row.siteId ? String(row.siteId) : null,
+      date: row.date ? new Date(row.date).toISOString() : new Date().toISOString(),
+      amount: parseFloat(row.amount) || 0,
+      unit: String(row.unit || "cum"),
+      grade: String(row.grade || ""),
+      quality: String(row.grade || ""),
+      productionType: String(row.productionType || "Transit Mixture"),
+      towerName: String(row.towerName || ""),
+      notes: String(row.notes || ""),
+      isRejected: String(row.isRejected || "false").toLowerCase() === "true",
+      rejectionReason: String(row.rejectionReason || ""),
+      customData: customCols.reduce((acc: any, col: any) => ({ ...acc, [col.key]: row[col.key] }), {})
+    }))
+
+    let success = 0
+    let failed = 0
+    for (const item of formatted) {
+      try {
         await createProduction(item)
+        success++
+      } catch (err) {
+        failed++
+        console.error("Failed to import production row", err)
       }
-      
-      setIsImportOpen(false)
-      loadData()
-    } catch (err) {
-      console.error("Import failed.", err)
+    }
+
+    setIsImportOpen(false)
+    loadData()
+    if (failed === 0) {
+      toast.success(`Imported ${success} record(s)`)
+    } else {
+      toast.error(`Imported ${success}, failed ${failed}. Check console for details.`)
     }
   }
 
@@ -390,6 +406,11 @@ export default function Production() {
                     <Label htmlFor="notes">Notes / Remarks</Label>
                     <Input id="notes" placeholder="Casting completed successfully." value={newProd.notes} onChange={e => setNewProd({...newProd, notes: e.target.value})} />
                   </div>
+                  <CustomFieldInputs
+                    columns={customCols}
+                    values={newProd.customData}
+                    onChange={(key, value) => setNewProd({ ...newProd, customData: { ...newProd.customData, [key]: value } })}
+                  />
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
@@ -705,6 +726,11 @@ export default function Production() {
                   <Label htmlFor="edit-notes">Notes / Remarks</Label>
                   <Input id="edit-notes" value={editingItem.notes || ""} onChange={e => setEditingItem({...editingItem, notes: e.target.value})} />
                 </div>
+                <CustomFieldInputs
+                  columns={customCols}
+                  values={editingItem.customData || {}}
+                  onChange={(key, value) => setEditingItem({ ...editingItem, customData: { ...(editingItem.customData || {}), [key]: value } })}
+                />
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
@@ -720,7 +746,7 @@ export default function Production() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         data={importData}
-        headers={["date", "siteId", "amount", "unit", "grade", "productionType", "towerName", "notes", "isRejected", "rejectionReason"]}
+        headers={["date", "siteId", "amount", "unit", "grade", "productionType", "towerName", "notes", "isRejected", "rejectionReason", ...customCols.map(c => c.key)]}
         validationRules={(row, i) => {
           const errs: string[] = []
           if (!row.amount || isNaN(parseFloat(row.amount))) errs.push(`Row ${i + 1}: amount must be a number`)

@@ -85,6 +85,7 @@ const createOverheadEntry = async (req, res) => {
                 amount: parseFloat(data.amount) || 0,
                 siteId: data.siteId || null,
                 date: data.date ? new Date(data.date) : new Date(),
+                customData: data.customData || undefined,
             },
             include: { site: true },
         });
@@ -101,7 +102,7 @@ const updateOverheadEntry = async (req, res) => {
     const tenantId = req.user.tenantId;
     const { userId, email } = req.user;
     const id = req.params.id;
-    const { category, description, quantity, unit, amount, siteId, date } = req.body;
+    const { category, description, quantity, unit, amount, siteId, date, customData } = req.body;
     try {
         await prisma_1.default.overheadEntry.updateMany({
             where: { id, tenantId },
@@ -113,6 +114,7 @@ const updateOverheadEntry = async (req, res) => {
                 amount: amount !== undefined ? parseFloat(amount) : undefined,
                 siteId,
                 date: date ? new Date(date) : undefined,
+                customData: customData !== undefined ? customData : undefined,
             },
         });
         const entry = await prisma_1.default.overheadEntry.findFirst({ where: { id, tenantId }, include: { site: true } });

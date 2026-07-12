@@ -168,9 +168,9 @@ router.post('/overhead', authorize(['overhead-report']), createOverheadEntry);
 router.put('/overhead/:id', authorize(['overhead-report']), updateOverheadEntry);
 router.delete('/overhead/:id', authorize(['overhead-report']), deleteOverheadEntry);
 
-// Custom Columns
-router.get('/custom-columns', authorize(['all']), getCustomColumns);
-router.post('/custom-columns', authorize(['all', 'admin']), createCustomColumn);
-router.delete('/custom-columns/:id', authorize(['all', 'admin']), deleteCustomColumn);
+// Custom Columns — readable by any authenticated user; only admins can define/remove
+router.get('/custom-columns', getCustomColumns);
+router.post('/custom-columns', authorize(['custom-columns']), createCustomColumn);
+router.delete('/custom-columns/:id', authorize(['custom-columns']), deleteCustomColumn);
 
 export default router;
