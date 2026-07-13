@@ -116,6 +116,7 @@ export const fetchOverheadSummary = (params?: { month?: string | number; year?: 
   return fetchRecords(qs ? `overhead/summary?${qs}` : 'overhead/summary');
 };
 export const createOverheadEntry = (data: any) => createRecord('overhead', data);
+export const deleteOverheadEntry = (id: string) => deleteRecord('overhead', id);
 
 // Document Attachment Upload Helpers
 export const uploadFile = async (file: File, entityFields: { employeeId?: string; vehicleId?: string; challanId?: string }) => {

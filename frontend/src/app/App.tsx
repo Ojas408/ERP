@@ -76,21 +76,18 @@ function AppContent() {
               {activeModule === "rmc-grade" && <RMCGradePage />}
               {activeModule === "scrap-management" && <ScrapManagementPage />}
               {activeModule === "purchase-order" && <PurchaseOrderPage />}
-              {activeModule === "payroll" && <div className="text-center py-12 text-muted-foreground">Payroll module - coming soon</div>}
-              {activeModule === "accounts" && <div className="text-center py-12 text-muted-foreground">Accounts & Finance module - coming soon</div>}
               {activeModule === "overhead-report" && <OverheadReportPage />}
               {activeModule === "site" && <SiteManagementPage />}
               {activeModule === "employee" && <EmployeeManagementPage />}
               {activeModule === "vendor" && <VendorManagementPage />}
               {activeModule === "settings" && <SettingsPage />}
-              {activeModule === "master-data" && <div className="text-center py-12 text-muted-foreground">Master Data module - coming soon</div>}
 
               {![
                 "dashboard", "projects", "workers", "equipment", "production", "consumption", 
                 "work-hour", "maintenance", "expense", "efficiency", "target", 
                 "vehicle-io", "time-motion", "challan", "inventory", "material-inward", 
-                "rmc-grade", "scrap-management", "purchase-order", "payroll", "accounts", 
-                "overhead-report", "site", "employee", "vendor", "settings", "master-data"
+                "rmc-grade", "scrap-management", "purchase-order",
+                "overhead-report", "site", "employee", "vendor", "settings"
               ].includes(activeModule) && (
                 <div className="flex flex-col items-center justify-center h-96 text-center">
                   <div className="p-8 rounded-lg bg-muted/50">

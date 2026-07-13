@@ -12,6 +12,7 @@ import {
   CheckCircle, 
   Clock, 
   Download, 
+  Upload,
   Plus, 
   Edit, 
   Trash2, 
@@ -342,7 +343,9 @@ export default function Challan() {
           status: String(row.status || "draft").toLowerCase()
         }
       })
-      await createChallan(formatted)
+      for (const challan of formatted) {
+        await createChallan(challan)
+      }
       toast.success(`Successfully imported ${formatted.length} delivery challans`)
       setIsImportOpen(false)
       loadData()
@@ -365,7 +368,16 @@ export default function Challan() {
   }
 
   const handlePrintRoster = () => {
-    printReport("challan-list-table", "DELIVERY CHALLANS LOG LEDGER")
+    const rows = filteredChallans.map(c => [
+      c.challanNumber,
+      new Date(c.date).toLocaleDateString(),
+      c.vehicle?.plateNumber || "N/A",
+      c.material,
+      c.quantity,
+      c.destination,
+      c.status,
+    ])
+    printReport("Delivery Challans Log Ledger", ["Challan No.", "Date", "Vehicle", "Material", "Quantity", "Destination", "Status"], rows)
   }
 
   // Filters calculation

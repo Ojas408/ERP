@@ -45,7 +45,7 @@ export const createCustomColumn = async (req: Request, res: Response) => {
 export const deleteCustomColumn = async (req: Request, res: Response) => {
   try {
     const tenantId = (req as any).user.tenantId;
-    const { id } = req.params;
+    const id = String(req.params.id);
 
     const column = await prisma.customColumn.findUnique({
       where: { id },

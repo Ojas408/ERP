@@ -43,13 +43,16 @@ async function main() {
       data: { name: 'Jaypee Wish Town (Combined KRH & GDI)', location: 'Noida', tenantId },
     }));
 
-  console.log('Deleting ALL old overhead entries...');
-  const deletedOh = await prisma.overheadEntry.deleteMany({});
-  console.log(`  Removed ${deletedOh.count} overhead rows`);
-
   // Clear June 2026 production for this tenant so CuM denominator is exact
   const juneStart = new Date('2026-06-01T00:00:00.000Z');
   const julyStart = new Date('2026-07-01T00:00:00.000Z');
+
+  console.log('Deleting old June 2026 overhead entries for this tenant only...');
+  const deletedOh = await prisma.overheadEntry.deleteMany({
+    where: { tenantId, date: { gte: juneStart, lt: julyStart } },
+  });
+  console.log(`  Removed ${deletedOh.count} overhead rows`);
+
   const deletedProd = await prisma.production.deleteMany({
     where: { tenantId, date: { gte: juneStart, lt: julyStart } },
   });
@@ -82,12 +85,13 @@ async function main() {
 
   // ——— 1. Machinery (Qty = nos of equipment, Rate = ₹/month) ———
   const machinery = [
-    { description: 'Batching Plant (Main Unit)', quantity: 2, rate: 0, amount: 0, remarks: 'Company Owned' },
-    { description: 'Transit Mixers (TMs)', quantity: 14, rate: 141660, amount: 1983240, remarks: null },
-    { description: 'JCB', quantity: 1, rate: 155760, amount: 155760, remarks: null },
-    { description: 'Loader', quantity: 1, rate: 152400, amount: 152400, remarks: null },
-    { description: 'Concrete Pumps (with pump labour & tractor trolley)', quantity: 1, rate: 287400, amount: 287400, remarks: null },
-    { description: 'Water Tanker & Spares', quantity: 0, rate: 0, amount: 0, remarks: null },
+    { description: 'Batching Plant (Main Unit)', quantity: 2, rate: 0, amount: 0, remarks: 'Company Owned Plant' },
+    { description: 'Transit Mixers (TMs)', quantity: 14, rate: 141600, amount: 1982400, remarks: 'Rented TMs- Shared Resources, used interchangeably at both plants. Final cost amount not yet confirmed as breakdown deduction to be confirmed from the billing dept.' },
+    { description: 'JCB', quantity: 1, rate: 155760, amount: 155760, remarks: 'JCB deployed at GDI Plant on Rental basis' },
+    { description: 'Loader', quantity: 1, rate: 153400, amount: 153400, remarks: 'Loader deployed at KRH Plant on Rental basis' },
+    { description: 'Concrete Pumps (with pump labour & tractor trolley)', quantity: 1, rate: 287000, amount: 287000, remarks: 'Pump deployed on Rental basis' },
+    { description: 'Water Tanker', quantity: 0, rate: 0, amount: 0, remarks: 'Deployed for sprinkling water' },
+    { description: 'Spares & Additional Equipement deployed', quantity: 0, rate: 0, amount: 0, remarks: 'No major overhead observed for plant maintenance in April' },
   ];
   for (const m of machinery) {
     rows.push({
@@ -101,17 +105,17 @@ async function main() {
   }
 
   // ——— 2. Fuel (Qty = Litres consumed, Rate = ₹/Litre) ———
-  const fuelRate = 95.85;
+  const fuelRate = 95.48;
   const fuelLines = [
-    { description: 'Diesel - TMs', litres: 14420 },
+    { description: 'Diesel - TMs (Shared Resources, used interchangeably at both plants)', litres: 14310, amount: 1701262.64 },
     { description: 'Diesel - JCB', litres: 1400 },
-    { description: 'Diesel - LOADER', litres: 1100 },
-    { description: 'Diesel - CONCRETE PUMP', litres: 800 },
-    { description: 'Diesel - TRACTOR', litres: 40 },
+    { description: 'Diesel - LOADER', litres: 1160 },
+    { description: 'CONCRETE PUMP', litres: 888 },
+    { description: ' TRACTOR (deployed for the movement of pump)', litres: 40 },
     { description: 'Diesel - DG', litres: 20 },
   ];
   for (const f of fuelLines) {
-    const amount = Math.round(f.litres * fuelRate * 100) / 100;
+    const amount = f.amount || 0;
     rows.push({
       category: 'Fuel',
       description: f.description,
@@ -130,13 +134,13 @@ async function main() {
 
   // ——— 3. Raw Material (Qty = MT, Rate = ₹/MT incl GST) ———
   const materials = [
-    { description: 'Cement', mt: 2227.653, rate: 6610.0, amount: 14724816.3 },
-    { description: '20 mm Aggregate', mt: 6272.685, rate: 1440.0, amount: 9032666.4 },
-    { description: '10 mm Aggregate', mt: 4311.435, rate: 1517.25, amount: 6541524.8 },
-    { description: 'Fine Aggregate', mt: 7867.832, rate: 1266.25, amount: 9962642.3 },
-    { description: 'Fly Ash', mt: 1135.845, rate: 3120.5, amount: 3544304.3 },
-    { description: 'Admixture', mt: 13.018, rate: 119000.0, amount: 1549142.0 },
-    { description: 'Water / Ice', mt: 0, rate: 0, amount: 0 },
+    { description: 'Cement', mt: 2227.651, rate: 6619.99, amount: 14747027.34349 },
+    { description: '20mm Aggregate', mt: 4272.685, rate: 1344, amount: 5742488.64 },
+    { description: '10mm Aggregate', mt: 4612.488, rate: 1307.25, amount: 6029674.938 },
+    { description: 'Fine Aggregate', mt: 7667.022, rate: 1296.75, amount: 9942210.7785 },
+    { description: 'Fly Ash', mt: 1135.809, rate: 1438.5, amount: 1633861.2465 },
+    { description: 'Admixtures', mt: 13.028, rate: 119000, amount: 1550332 },
+    { description: 'Water/Ice for concrete', mt: 0, rate: 0, amount: 0 },
   ];
   for (const m of materials) {
     rows.push({
@@ -156,13 +160,13 @@ async function main() {
 
   // ——— 4. Manpower (Qty = persons) ———
   const manpower = [
-    { description: 'Maintenance & Electrical', persons: 2, amount: 51000, details: '2 persons' },
-    { description: 'Quality Team', persons: 9, amount: 233485, details: '9 persons' },
-    { description: 'Batching Plant Operator', persons: 4, amount: 100000, details: '4 persons' },
-    { description: 'Production Supervision', persons: 2, amount: 60000, details: '2 persons' },
-    { description: 'Helper / Unskilled Labour', persons: 11, amount: 370400, details: '11 persons' },
-    { description: 'JCB & Loader Operator', persons: 2, amount: 0, details: 'Cost included in vendor' },
-    { description: 'Housekeeping', persons: 1, amount: 0, details: '1 person' },
+    { description: 'Maintenance & Electrical Team', persons: 2, amount: 52000, details: 'Rohit, Pramod' },
+    { description: 'Quality Team', persons: 9, amount: 288400, details: 'Reetesh, Manoj, Joginder, Sonu, Akash, Shubham, Golu' },
+    { description: 'Batching Plant Operator', persons: 4, amount: 166000, details: 'Bhola, Jitin, Sangat, Lovekush, Sushant' },
+    { description: 'Production Supervision Team', persons: 2, amount: 60000, details: 'Suraj, Rajesh' },
+    { description: 'Helper / Unskilled Labour', persons: 0, amount: 270000, details: 'Deployed on part of the labour contractor' },
+    { description: 'JCB & Loader Operator', persons: 0, amount: 0, details: 'Deployed on part of the vendor' },
+    { description: 'Housekeeping / Office Staff', persons: 0, amount: 0, details: 'Not deployed' },
   ];
   for (const m of manpower) {
     rows.push({
@@ -186,19 +190,19 @@ async function main() {
     description: 'Power consumption for overall Plant Operations',
     quantity: null,
     unit: UNIT.Electricity,
-    amount: 218419,
+    amount: 218619,
     customData: {
       ...plantMeta,
-      costPerCuM: 218419 / TOTAL_PRODUCTION_CUM,
+      costPerCuM: 218619 / TOTAL_PRODUCTION_CUM,
       remarks: 'Plant electricity bill',
     },
   });
 
   // ——— 6. Maintenance & Misc ———
   const maint = [
-    { description: 'General Maintenance & Repair', amount: 15000 },
-    { description: 'Calibration of Plant', amount: 0 },
-    { description: 'Compliance / External Tests', amount: 0 },
+    { description: 'General Maintenance & Repairs', amount: 15000 },
+    { description: 'Calibration of Plant & Other Equipment', amount: 0 },
+    { description: 'Compliance & External Tests etc.', amount: 0 },
   ];
   for (const m of maint) {
     rows.push({

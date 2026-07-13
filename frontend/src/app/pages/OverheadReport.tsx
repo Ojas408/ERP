@@ -142,7 +142,7 @@ export default function OverheadReport() {
   const [month, setMonth] = useState("6")
   const [year, setYear] = useState("2026")
   const [siteId, setSiteId] = useState("all")
-  const [plantName, setPlantName] = useState("Jaypee Wish Town (KRH & GDI)")
+  const [plantName, setPlantName] = useState("ALL PLANTS COMBINED (KRH & GDI)")
   const [preparedBy, setPreparedBy] = useState("Reetesh Sharma, Manager - Quality")
   const [submittedTo, setSubmittedTo] = useState("Jitendra Sir, Mukesh Mokha Sir")
   const [newEntry, setNewEntry] = useState({
@@ -318,7 +318,7 @@ export default function OverheadReport() {
     exportData.push(["RMC Batching Plant Jaypee Wish Town – Monthly Overheads Report"])
     exportData.push([plantName, "", "", `Month & Year: ${monthLabel}`])
     exportData.push([`Prepared by: ${preparedBy}`, "", "", `Submitted to (for review): ${submittedTo}`])
-    exportData.push([])
+    exportData.push(["Total monthly Concrete Production done from in-house Batching Plants (KRH & GDI):", "", "", "", "", totalCuM, "CuM"])
     
     // Section 1: Machinery Overhead
     exportData.push(["1. Machinery Overhead"])
@@ -493,8 +493,66 @@ export default function OverheadReport() {
     
     // Export using sheetjs
     const ws = XLSX.utils.aoa_to_sheet(exportData)
+    ws["!cols"] = [
+      { wch: 48 },
+      { wch: 16 },
+      { wch: 22 },
+      { wch: 24 },
+      { wch: 26 },
+      { wch: 58 },
+      { wch: 24 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 18 },
+    ]
+    ws["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
+      { s: { r: 4, c: 0 }, e: { r: 4, c: 6 } },
+      { s: { r: 15, c: 0 }, e: { r: 15, c: 6 } },
+      { s: { r: 25, c: 0 }, e: { r: 25, c: 6 } },
+      { s: { r: 36, c: 0 }, e: { r: 36, c: 6 } },
+      { s: { r: 47, c: 0 }, e: { r: 47, c: 6 } },
+      { s: { r: 51, c: 0 }, e: { r: 51, c: 6 } },
+      { s: { r: 58, c: 0 }, e: { r: 58, c: 6 } },
+    ]
+    const setFormula = (cell: string, formula: string) => {
+      ws[cell] = ws[cell] || { t: "n", v: 0 }
+      ws[cell].f = formula
+    }
+    ;[
+      ["E7", "D7/$F$4"],
+      ["D8", "B8*C8"], ["E8", "D8/$F$4"],
+      ["D9", "B9*C9"], ["E9", "D9/$F$4"],
+      ["D10", "B10*C10"], ["E10", "D10/$F$4"],
+      ["D11", "B11*C11"], ["E11", "D11/$F$4"],
+      ["D12", "B12*C12"], ["E12", "D12/$F$4"],
+      ["D13", "B13*C13"], ["E13", "D13/$F$4"],
+      ["D14", "SUM(D7:D13)"], ["E14", "SUM(E7:E13)"],
+      ["C18", "$F$4"], ["D18", "B18/C18"], ["F18", "E18*B24"], ["G18", "F18/C18"],
+      ["D19", "B19/C18"], ["D20", "B20/C18"], ["D21", "B21/C18"], ["D22", "B22/C18"], ["D23", "B23/C18"],
+      ["B24", "SUM(B18:B23)"], ["D24", "B24/C18"],
+      ["D28", "B28*C28"], ["E28", "D28/$F$4"],
+      ["D29", "B29*C29"], ["E29", "D29/$F$4"],
+      ["D30", "B30*C30"], ["E30", "D30/$F$4"],
+      ["D31", "B31*C31"], ["E31", "D31/$F$4"],
+      ["D32", "B32*C32"], ["E32", "D32/$F$4"],
+      ["D33", "B33*C33"], ["E33", "D33/$F$4"],
+      ["D34", "B34*C34"], ["E34", "D34/$F$4"],
+      ["D35", "SUM(D28:D34)"], ["E35", "D35/$F$4"],
+      ["D46", "SUM(D39:D45)"],
+      ["E50", "D50/$F$4"],
+      ["E54", "D57/$F$4"], ["D57", "SUM(D54:D56)"],
+      ["C61", "D14"], ["D61", "C61/C67%"], ["E61", "C67/C18"],
+      ["C62", "F18"], ["D62", "C62/C67%"],
+      ["C63", "D35"], ["D63", "C63/C67%"],
+      ["C64", "D46"], ["D64", "C64/C67%"],
+      ["C65", "D50"], ["D65", "C65/C67%"],
+      ["C66", "D57"], ["D66", "C66/C67%"],
+      ["C67", "SUM(C61:C66)"],
+    ].forEach(([cell, formula]) => setFormula(cell, formula))
     const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Overhead Report")
+    XLSX.utils.book_append_sheet(wb, ws, "Combined - JUNE 2026")
     XLSX.writeFile(wb, `Overhead_Report_${monthLabel.replace(" ", "_")}.xlsx`)
   }
 
@@ -564,12 +622,12 @@ export default function OverheadReport() {
             </Button>
             <label className="inline-flex items-center justify-center rounded-md border border-slate-300 bg-background text-xs font-semibold px-3 h-9 cursor-pointer hover:bg-muted">
               <Upload className="h-4 w-4 mr-2 text-muted-foreground" />
-              Import Excel
+              Import Sheet Data
               <input type="file" onChange={handleExcelImport} className="hidden" accept=".xlsx,.xls,.csv" />
             </label>
             <Button variant="outline" className="text-xs h-9" onClick={handleExportExcel}>
               <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
-              Export Report
+              Export Sheet Data
             </Button>
           </div>
           
