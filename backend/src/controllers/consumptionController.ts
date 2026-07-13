@@ -2,6 +2,12 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 
+function parseOptionalFloat(v: any) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 export const getConsumptions = async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
@@ -19,22 +25,40 @@ export const getConsumptions = async (req: AuthRequest, res: Response) => {
 export const createConsumption = async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const { material, amount, unit, siteId, date, isRejected, rejectionReason } = req.body;
+    const {
+      material,
+      amount,
+      unit,
+      siteId,
+      date,
+      isRejected,
+      rejectionReason,
+      unitPrice,
+      sourceLocation,
+      brand,
+      mfgLocation,
+      customData,
+    } = req.body;
     const consumption = await prisma.consumption.create({
       data: {
         tenantId,
         material,
         amount: parseFloat(amount),
         unit,
-        siteId,
+        siteId: siteId || null,
         isRejected: isRejected === true || isRejected === 'true',
         rejectionReason: rejectionReason || null,
         date: date ? new Date(date) : new Date(),
-        customData: req.body.customData || undefined,
+        unitPrice: parseOptionalFloat(unitPrice),
+        sourceLocation: sourceLocation || null,
+        brand: brand || null,
+        mfgLocation: mfgLocation || null,
+        customData: customData || undefined,
       },
     });
     res.json(consumption);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to create consumption' });
   }
 };
@@ -43,7 +67,20 @@ export const updateConsumption = async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
     const id = req.params.id as string;
-    const { material, amount, unit, siteId, date, isRejected, rejectionReason } = req.body;
+    const {
+      material,
+      amount,
+      unit,
+      siteId,
+      date,
+      isRejected,
+      rejectionReason,
+      unitPrice,
+      sourceLocation,
+      brand,
+      mfgLocation,
+      customData,
+    } = req.body;
     await prisma.consumption.updateMany({
       where: { id, tenantId },
       data: {
@@ -51,15 +88,20 @@ export const updateConsumption = async (req: AuthRequest, res: Response) => {
         amount: amount !== undefined ? parseFloat(amount) : undefined,
         unit,
         siteId,
-        isRejected: isRejected !== undefined ? (isRejected === true || isRejected === 'true') : undefined,
+        isRejected: isRejected !== undefined ? isRejected === true || isRejected === 'true' : undefined,
         rejectionReason,
         date: date ? new Date(date) : undefined,
-        customData: req.body.customData !== undefined ? req.body.customData : undefined,
+        unitPrice: unitPrice !== undefined ? parseOptionalFloat(unitPrice) : undefined,
+        sourceLocation: sourceLocation !== undefined ? sourceLocation || null : undefined,
+        brand: brand !== undefined ? brand || null : undefined,
+        mfgLocation: mfgLocation !== undefined ? mfgLocation || null : undefined,
+        customData: customData !== undefined ? customData : undefined,
       },
     });
     const consumption = await prisma.consumption.findFirst({ where: { id, tenantId } });
     res.json(consumption);
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: 'Failed to update consumption' });
   }
 };

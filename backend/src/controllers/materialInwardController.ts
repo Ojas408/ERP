@@ -3,6 +3,12 @@ import { AuthRequest } from '../middleware/auth';
 import prisma from '../lib/prisma';
 import { logActivity } from '../utils/audit';
 
+function parseOptionalFloat(v: any) {
+  if (v === undefined || v === null || v === '') return null;
+  const n = parseFloat(v);
+  return Number.isFinite(n) ? n : null;
+}
+
 export const getMaterialInwards = async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
@@ -24,22 +30,28 @@ export const createMaterialInward = async (req: AuthRequest, res: Response) => {
   try {
     if (Array.isArray(data)) {
       const inwards = await prisma.$transaction(
-        data.map(item => prisma.materialInward.create({
-          data: {
-            tenantId,
-            inwardNumber: item.inwardNumber,
-            date: item.date ? new Date(item.date) : new Date(),
-            materialName: item.materialName,
-            quantity: parseFloat(item.quantity) || 0,
-            unit: item.unit || 'units',
-            supplierName: item.supplierName,
-            vehicleNumber: item.vehicleNumber,
-            challanNumber: item.challanNumber,
-            siteId: item.siteId,
-            receivedBy: item.receivedBy,
-            remarks: item.remarks,
-          }
-        }))
+        data.map((item) =>
+          prisma.materialInward.create({
+            data: {
+              tenantId,
+              inwardNumber: item.inwardNumber,
+              date: item.date ? new Date(item.date) : new Date(),
+              materialName: item.materialName,
+              quantity: parseFloat(item.quantity) || 0,
+              unit: item.unit || 'units',
+              supplierName: item.supplierName,
+              vehicleNumber: item.vehicleNumber,
+              challanNumber: item.challanNumber,
+              siteId: item.siteId,
+              receivedBy: item.receivedBy,
+              remarks: item.remarks,
+              unitPrice: parseOptionalFloat(item.unitPrice),
+              sourceLocation: item.sourceLocation || null,
+              brand: item.brand || null,
+              mfgLocation: item.mfgLocation || null,
+            },
+          })
+        )
       );
       await logActivity(userId, email, tenantId, 'BULK_CREATE', 'MaterialInward', `Imported ${inwards.length} inward logs`);
       res.status(201).json(inwards);
@@ -58,6 +70,10 @@ export const createMaterialInward = async (req: AuthRequest, res: Response) => {
           siteId: data.siteId,
           receivedBy: data.receivedBy,
           remarks: data.remarks,
+          unitPrice: parseOptionalFloat(data.unitPrice),
+          sourceLocation: data.sourceLocation || null,
+          brand: data.brand || null,
+          mfgLocation: data.mfgLocation || null,
         },
       });
       await logActivity(userId, email, tenantId, 'CREATE', 'MaterialInward', `Created inward log: ${inward.inwardNumber}`);
@@ -73,7 +89,23 @@ export const updateMaterialInward = async (req: AuthRequest, res: Response) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
-  const { inwardNumber, date, materialName, quantity, unit, supplierName, vehicleNumber, challanNumber, siteId, receivedBy, remarks } = req.body;
+  const {
+    inwardNumber,
+    date,
+    materialName,
+    quantity,
+    unit,
+    supplierName,
+    vehicleNumber,
+    challanNumber,
+    siteId,
+    receivedBy,
+    remarks,
+    unitPrice,
+    sourceLocation,
+    brand,
+    mfgLocation,
+  } = req.body;
   try {
     await prisma.materialInward.updateMany({
       where: { id, tenantId },
@@ -89,6 +121,10 @@ export const updateMaterialInward = async (req: AuthRequest, res: Response) => {
         siteId,
         receivedBy,
         remarks,
+        unitPrice: unitPrice !== undefined ? parseOptionalFloat(unitPrice) : undefined,
+        sourceLocation: sourceLocation !== undefined ? sourceLocation || null : undefined,
+        brand: brand !== undefined ? brand || null : undefined,
+        mfgLocation: mfgLocation !== undefined ? mfgLocation || null : undefined,
       },
     });
     const inward = await prisma.materialInward.findFirst({ where: { id, tenantId } });

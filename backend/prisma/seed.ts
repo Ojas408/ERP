@@ -329,22 +329,91 @@ async function main() {
     ]
   });
 
-  // 19. Seed Total Overhead Report entries
-  console.log('Seeding Overhead Entries...');
-  await prisma.overheadEntry.createMany({
-    data: [
-      { category: 'Transit Mixture', description: 'RMC supply - May batch 1', quantity: 150, unit: 'cum', amount: 675000, siteId: site1.id, date: new Date('2026-05-28'), tenantId: tenantA.id },
-      { category: 'Transit Mixture', description: 'RMC supply - May batch 2', quantity: 110, unit: 'cum', amount: 495000, siteId: site2.id, date: new Date('2026-05-30'), tenantId: tenantA.id },
-      { category: 'Slabs', description: 'Ground floor slab - Block B', quantity: 120, unit: 'sqm', amount: 360000, siteId: site2.id, date: new Date('2026-05-29'), tenantId: tenantA.id },
-      { category: 'Slabs', description: 'Podium slab - Tower A', quantity: 85, unit: 'sqm', amount: 255000, siteId: site1.id, date: new Date('2026-05-27'), tenantId: tenantA.id },
-      { category: 'Cement', description: 'Cement procurement overhead', quantity: 800, unit: 'bags', amount: 336000, siteId: site1.id, tenantId: tenantA.id },
-      { category: 'Aggregate', description: 'Aggregate & sand handling', quantity: 205, unit: 'tons', amount: 287000, siteId: site1.id, tenantId: tenantA.id },
-      { category: 'Labour', description: 'Site labour wages - May', amount: 420000, siteId: site2.id, tenantId: tenantA.id },
-      { category: 'Fuel', description: 'Transit mixer diesel & equipment fuel', amount: 98000, siteId: site1.id, tenantId: tenantA.id },
-      { category: 'Maintenance', description: 'Mixer truck & pump maintenance', amount: 45000, siteId: site2.id, tenantId: tenantA.id },
-      { category: 'Equipment Hire', description: 'Crane & vibrator hire charges', amount: 125000, siteId: site1.id, tenantId: tenantA.id },
-    ]
+  // 19. Seed Total Overhead Report — June plant sample (correct units)
+  console.log('Seeding Overhead Entries (June plant report)...');
+  const TOTAL_CUM = 9549;
+  const OH_DATE = new Date('2026-06-15T10:00:00Z');
+  const plantMeta = { plantName: 'Jaypee Wish Town (KRH & GDI)', monthYearStr: 'JUNE 2026', totalProductionCuM: TOTAL_CUM };
+
+  // Ensure production denominator exists
+  await prisma.production.create({
+    data: {
+      amount: TOTAL_CUM,
+      unit: 'cum',
+      grade: 'Mixed Grades',
+      productionType: 'Transit Mixture',
+      siteId: site1.id,
+      towerName: 'Jaypee Wish Town — All Plants',
+      notes: 'Monthly total for overhead Cost/CuM',
+      date: OH_DATE,
+      tenantId: tenantA.id,
+    },
   });
+
+  const overheadRows: any[] = [];
+  const pushOh = (category: string, description: string, quantity: number | null, unit: string, amount: number, extra: any = {}) => {
+    overheadRows.push({
+      category, description, quantity, unit, amount,
+      siteId: site1.id, date: OH_DATE, tenantId: tenantA.id,
+      customData: { ...plantMeta, ...extra },
+    });
+  };
+
+  // Machinery — nos + ₹/month
+  pushOh('Machinery', 'Batching Plant (Main Unit)', 2, 'nos', 0, { rate: 0, remarks: 'Company Owned' });
+  pushOh('Machinery', 'Transit Mixers (TMs)', 14, 'nos', 1983240, { rate: 141660 });
+  pushOh('Machinery', 'JCB', 1, 'nos', 155760, { rate: 155760 });
+  pushOh('Machinery', 'Loader', 1, 'nos', 152400, { rate: 152400 });
+  pushOh('Machinery', 'Concrete Pumps (with pump labour & tractor trolley)', 1, 'nos', 287400, { rate: 287400 });
+  pushOh('Machinery', 'Water Tanker & Spares', 0, 'nos', 0, { rate: 0 });
+
+  // Fuel — Litres + ₹/Litre
+  const fuelRate = 95.85;
+  ;[
+    ['Diesel - TMs', 14420],
+    ['Diesel - JCB', 1400],
+    ['Diesel - LOADER', 1100],
+    ['Diesel - CONCRETE PUMP', 800],
+    ['Diesel - TRACTOR', 40],
+    ['Diesel - DG', 20],
+  ].forEach(([desc, litres]) => {
+    const L = litres as number;
+    const amt = Math.round(L * fuelRate * 100) / 100;
+    pushOh('Fuel', desc as string, L, 'Litres', amt, { rate: fuelRate, avgFuelConsumption: L / TOTAL_CUM });
+  });
+
+  // Raw Material — MT + ₹/MT
+  ;[
+    ['Cement', 2227.653, 6610.0, 14724816.3],
+    ['20 mm Aggregate', 6272.685, 1440.0, 9032666.4],
+    ['10 mm Aggregate', 4311.435, 1517.25, 6541524.8],
+    ['Fine Aggregate', 7867.832, 1266.25, 9962642.3],
+    ['Fly Ash', 1135.845, 3120.5, 3544304.3],
+    ['Admixture', 13.018, 119000.0, 1549142.0],
+    ['Water / Ice', 0, 0, 0],
+  ].forEach(([desc, mt, rate, amt]) => {
+    pushOh('Raw Material', desc as string, mt as number, 'MT', amt as number, { rate, remarks: 'Avg cost per MT (incl. GST)' });
+  });
+
+  // Manpower — persons
+  ;[
+    ['Maintenance & Electrical', 2, 51000],
+    ['Quality Team', 9, 233485],
+    ['Batching Plant Operator', 4, 100000],
+    ['Production Supervision', 2, 60000],
+    ['Helper / Unskilled Labour', 11, 370400],
+    ['JCB & Loader Operator', 2, 0],
+    ['Housekeeping', 1, 0],
+  ].forEach(([desc, persons, amt]) => {
+    pushOh('Manpower', desc as string, persons as number, 'persons', amt as number, { personnelDetails: `${persons} persons` });
+  });
+
+  pushOh('Electricity', 'Power consumption for overall Plant Operations', null, 'kWh', 218419, { remarks: 'Plant electricity bill' });
+  pushOh('Maintenance', 'General Maintenance & Repair', null, 'ls', 15000, {});
+  pushOh('Maintenance', 'Calibration of Plant', null, 'ls', 0, {});
+  pushOh('Maintenance', 'Compliance / External Tests', null, 'ls', 0, {});
+
+  await prisma.overheadEntry.createMany({ data: overheadRows });
 
   // 20. Seed role-based test users (password: admin123)
   console.log('Seeding role test users...');

@@ -30,13 +30,17 @@ export default function Consumption() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
   const [newCons, setNewCons] = useState({
-    material: "Diesel",
+    material: "Cement",
     amount: "",
-    unit: "Liters",
+    unit: "MT",
     siteId: "",
-    date: new Date().toISOString().split('T')[0],
+    date: new Date().toISOString().slice(0, 16),
     isRejected: false,
     rejectionReason: "",
+    unitPrice: "",
+    sourceLocation: "",
+    brand: "",
+    mfgLocation: "",
     customData: {} as Record<string, any>
   })
 
@@ -73,17 +77,24 @@ export default function Consumption() {
     try {
       await createConsumption({
         ...newCons,
-        amount: parseFloat(newCons.amount) || 0
+        amount: parseFloat(newCons.amount) || 0,
+        unitPrice: newCons.unitPrice ? parseFloat(newCons.unitPrice) : null,
+        date: new Date(newCons.date).toISOString(),
       })
       setIsAddOpen(false)
       setNewCons({
-        material: "Diesel",
+        material: "Cement",
         amount: "",
-        unit: "Liters",
+        unit: "MT",
         siteId: "",
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toISOString().slice(0, 16),
         isRejected: false,
-        rejectionReason: ""
+        rejectionReason: "",
+        unitPrice: "",
+        sourceLocation: "",
+        brand: "",
+        mfgLocation: "",
+        customData: {},
       })
       loadData()
     } catch (error) {
@@ -94,10 +105,14 @@ export default function Consumption() {
   const handleEdit = (item: any) => {
     setEditingItem({
       ...item,
-      date: new Date(item.date).toISOString().split('T')[0],
+      date: item.date ? new Date(item.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16),
       amount: String(item.amount || 0),
       isRejected: item.isRejected || false,
       rejectionReason: item.rejectionReason || "",
+      unitPrice: item.unitPrice != null ? String(item.unitPrice) : "",
+      sourceLocation: item.sourceLocation || "",
+      brand: item.brand || "",
+      mfgLocation: item.mfgLocation || "",
       customData: item.customData || {}
     })
     setIsEditOpen(true)
@@ -109,7 +124,11 @@ export default function Consumption() {
     try {
       await updateRecord('consumption', editingItem.id, {
         ...editingItem,
-        amount: parseFloat(editingItem.amount) || 0
+        amount: parseFloat(editingItem.amount) || 0,
+        unitPrice: editingItem.unitPrice !== "" && editingItem.unitPrice != null
+          ? parseFloat(editingItem.unitPrice)
+          : null,
+        date: new Date(editingItem.date).toISOString(),
       })
       setIsEditOpen(false)
       setEditingItem(null)
@@ -231,19 +250,47 @@ export default function Consumption() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Material</Label>
-                    <Select value={newCons.material} onValueChange={v => setNewCons({...newCons, material: v})}>
+                    <Select value={newCons.material} onValueChange={v => setNewCons({
+                      ...newCons,
+                      material: v,
+                      unit: v === "Diesel" ? "Litres" : "MT",
+                    })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Diesel">Diesel</SelectItem>
                         <SelectItem value="Cement">Cement</SelectItem>
+                        <SelectItem value="Aggregate">Aggregate</SelectItem>
+                        <SelectItem value="GGBS">GGBS</SelectItem>
+                        <SelectItem value="Fly Ash">Fly Ash</SelectItem>
+                        <SelectItem value="Micro Fine">Micro Fine</SelectItem>
+                        <SelectItem value="Admixture">Admixture (Add Mix)</SelectItem>
+                        <SelectItem value="Diesel">Diesel (Transit Mixer / Plant)</SelectItem>
                         <SelectItem value="Steel">Steel</SelectItem>
-                        <SelectItem value="Aggregates">Aggregates</SelectItem>
+                        <SelectItem value="Water">Water / Ice</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2"><Label>Amount</Label><Input type="number" value={newCons.amount} onChange={e => setNewCons({...newCons, amount: e.target.value})} required /></div>
+                  <div className="space-y-2"><Label>Amount / Qty</Label><Input type="number" value={newCons.amount} onChange={e => setNewCons({...newCons, amount: e.target.value})} required /></div>
                   <div className="space-y-2"><Label>Unit</Label><Input value={newCons.unit} onChange={e => setNewCons({...newCons, unit: e.target.value})} required /></div>
-                  <div className="space-y-2"><Label>Date</Label><Input type="date" value={newCons.date} onChange={e => setNewCons({...newCons, date: e.target.value})} required /></div>
+                  <div className="space-y-2"><Label>Unit Price (₹) — for cost / CuM</Label><Input type="number" value={newCons.unitPrice} onChange={e => setNewCons({...newCons, unitPrice: e.target.value})} placeholder="Avg rate" /></div>
+                  <div className="space-y-2"><Label>Date & Time</Label><Input type="datetime-local" value={newCons.date} onChange={e => setNewCons({...newCons, date: e.target.value})} required /></div>
+                  {newCons.material === "GGBS" && (
+                    <div className="space-y-2 col-span-2">
+                      <Label>Source Location</Label>
+                      <Input value={newCons.sourceLocation} onChange={e => setNewCons({...newCons, sourceLocation: e.target.value})} placeholder="GGBS source location" />
+                    </div>
+                  )}
+                  {newCons.material === "Fly Ash" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Manufacturing Location</Label>
+                        <Input value={newCons.mfgLocation} onChange={e => setNewCons({...newCons, mfgLocation: e.target.value})} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Brand</Label>
+                        <Input value={newCons.brand} onChange={e => setNewCons({...newCons, brand: e.target.value})} />
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-2 col-span-2">
                     <Label>Site</Label>
                     <Select value={newCons.siteId} onValueChange={v => setNewCons({...newCons, siteId: v})}>
@@ -351,16 +398,40 @@ export default function Consumption() {
                   <Select value={editingItem.material} onValueChange={v => setEditingItem({...editingItem, material: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Diesel">Diesel</SelectItem>
                       <SelectItem value="Cement">Cement</SelectItem>
+                      <SelectItem value="Aggregate">Aggregate</SelectItem>
+                      <SelectItem value="GGBS">GGBS</SelectItem>
+                      <SelectItem value="Fly Ash">Fly Ash</SelectItem>
+                      <SelectItem value="Micro Fine">Micro Fine</SelectItem>
+                      <SelectItem value="Admixture">Admixture (Add Mix)</SelectItem>
+                      <SelectItem value="Diesel">Diesel (Transit Mixer / Plant)</SelectItem>
                       <SelectItem value="Steel">Steel</SelectItem>
-                      <SelectItem value="Aggregates">Aggregates</SelectItem>
+                      <SelectItem value="Water">Water / Ice</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2"><Label>Amount</Label><Input type="number" value={editingItem.amount} onChange={e => setEditingItem({...editingItem, amount: e.target.value})} required /></div>
                 <div className="space-y-2"><Label>Unit</Label><Input value={editingItem.unit} onChange={e => setEditingItem({...editingItem, unit: e.target.value})} required /></div>
-                <div className="space-y-2"><Label>Date</Label><Input type="date" value={editingItem.date} onChange={e => setEditingItem({...editingItem, date: e.target.value})} required /></div>
+                <div className="space-y-2"><Label>Unit Price (₹)</Label><Input type="number" value={editingItem.unitPrice ?? ""} onChange={e => setEditingItem({...editingItem, unitPrice: e.target.value})} /></div>
+                <div className="space-y-2"><Label>Date & Time</Label><Input type="datetime-local" value={editingItem.date} onChange={e => setEditingItem({...editingItem, date: e.target.value})} required /></div>
+                {editingItem.material === "GGBS" && (
+                  <div className="space-y-2 col-span-2">
+                    <Label>Source Location</Label>
+                    <Input value={editingItem.sourceLocation || ""} onChange={e => setEditingItem({...editingItem, sourceLocation: e.target.value})} />
+                  </div>
+                )}
+                {editingItem.material === "Fly Ash" && (
+                  <>
+                    <div className="space-y-2">
+                      <Label>Mfg Location</Label>
+                      <Input value={editingItem.mfgLocation || ""} onChange={e => setEditingItem({...editingItem, mfgLocation: e.target.value})} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Brand</Label>
+                      <Input value={editingItem.brand || ""} onChange={e => setEditingItem({...editingItem, brand: e.target.value})} />
+                    </div>
+                  </>
+                )}
                 <div className="space-y-2 col-span-2">
                   <Label>Site</Label>
                   <Select value={editingItem.siteId} onValueChange={v => setEditingItem({...editingItem, siteId: v})}>

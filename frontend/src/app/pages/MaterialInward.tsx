@@ -67,7 +67,11 @@ export default function MaterialInward() {
     challanNumber: "",
     siteId: "",
     receivedBy: "",
-    remarks: ""
+    remarks: "",
+    unitPrice: "",
+    sourceLocation: "",
+    brand: "",
+    mfgLocation: "",
   })
 
   useEffect(() => {
@@ -103,6 +107,7 @@ export default function MaterialInward() {
       await createMaterialInward({
         ...newInward,
         quantity: parseFloat(newInward.quantity) || 0,
+        unitPrice: newInward.unitPrice ? parseFloat(newInward.unitPrice) : null,
         date: new Date(newInward.date).toISOString()
       })
       toast.success("Material Inward logged successfully")
@@ -118,7 +123,11 @@ export default function MaterialInward() {
         challanNumber: "",
         siteId: "",
         receivedBy: "",
-        remarks: ""
+        remarks: "",
+        unitPrice: "",
+        sourceLocation: "",
+        brand: "",
+        mfgLocation: "",
       })
       loadData()
     } catch (error) {
@@ -144,6 +153,9 @@ export default function MaterialInward() {
       await updateRecord('material-inward', editingItem.id, {
         ...editingItem,
         quantity: parseFloat(editingItem.quantity) || 0,
+        unitPrice: editingItem.unitPrice !== "" && editingItem.unitPrice != null
+          ? parseFloat(editingItem.unitPrice)
+          : null,
         date: new Date(editingItem.date).toISOString()
       })
       toast.success("Material inward record updated")
@@ -238,12 +250,16 @@ export default function MaterialInward() {
                     <Select value={newInward.materialName} onValueChange={v => setNewInward({...newInward, materialName: v})}>
                       <SelectTrigger id="inwMaterial"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Cement">Cement Bags</SelectItem>
-                        <SelectItem value="Sand">Sand</SelectItem>
+                        <SelectItem value="Cement">Cement</SelectItem>
                         <SelectItem value="Aggregate">Aggregate</SelectItem>
+                        <SelectItem value="Sand">Sand / Fine Aggregate</SelectItem>
+                        <SelectItem value="GGBS">GGBS</SelectItem>
+                        <SelectItem value="Fly Ash">Fly Ash</SelectItem>
+                        <SelectItem value="Micro Fine">Micro Fine</SelectItem>
+                        <SelectItem value="Admixture">Admixture (Add Mix)</SelectItem>
                         <SelectItem value="Steel">Reinforcement Steel</SelectItem>
                         <SelectItem value="RMC">Ready Mix Concrete (RMC)</SelectItem>
-                        <SelectItem value="Bricks">Bricks / Fly Ash</SelectItem>
+                        <SelectItem value="Bricks">Bricks</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -257,13 +273,37 @@ export default function MaterialInward() {
                       <SelectTrigger id="inwUnit"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="bags">Bags</SelectItem>
+                        <SelectItem value="MT">MT (Metric Ton)</SelectItem>
                         <SelectItem value="tons">Tons</SelectItem>
                         <SelectItem value="kg">kg</SelectItem>
                         <SelectItem value="cum">Cu.M.</SelectItem>
+                        <SelectItem value="litres">Litres</SelectItem>
                         <SelectItem value="units">Units</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="inwPrice">Unit Price (₹)</Label>
+                    <Input id="inwPrice" type="number" placeholder="Avg purchase rate" value={newInward.unitPrice} onChange={e => setNewInward({...newInward, unitPrice: e.target.value})} />
+                  </div>
+                  {newInward.materialName === "GGBS" && (
+                    <div className="space-y-1">
+                      <Label>Source Location *</Label>
+                      <Input placeholder="GGBS source location" value={newInward.sourceLocation} onChange={e => setNewInward({...newInward, sourceLocation: e.target.value})} />
+                    </div>
+                  )}
+                  {newInward.materialName === "Fly Ash" && (
+                    <>
+                      <div className="space-y-1">
+                        <Label>Manufacturing Location</Label>
+                        <Input placeholder="Mfg location" value={newInward.mfgLocation} onChange={e => setNewInward({...newInward, mfgLocation: e.target.value})} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Brand</Label>
+                        <Input placeholder="Brand name" value={newInward.brand} onChange={e => setNewInward({...newInward, brand: e.target.value})} />
+                      </div>
+                    </>
+                  )}
                   <div className="space-y-1">
                     <Label htmlFor="inwSupplier">Supplier Name *</Label>
                     <Input id="inwSupplier" placeholder="Supreme Cement Group" value={newInward.supplierName} onChange={e => setNewInward({...newInward, supplierName: e.target.value})} required />
@@ -444,12 +484,16 @@ export default function MaterialInward() {
                   <Select value={editingItem.materialName} onValueChange={v => setEditingItem({...editingItem, materialName: v})}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Cement">Cement Bags</SelectItem>
-                      <SelectItem value="Sand">Sand</SelectItem>
+                      <SelectItem value="Cement">Cement</SelectItem>
                       <SelectItem value="Aggregate">Aggregate</SelectItem>
+                      <SelectItem value="Sand">Sand / Fine Aggregate</SelectItem>
+                      <SelectItem value="GGBS">GGBS</SelectItem>
+                      <SelectItem value="Fly Ash">Fly Ash</SelectItem>
+                      <SelectItem value="Micro Fine">Micro Fine</SelectItem>
+                      <SelectItem value="Admixture">Admixture (Add Mix)</SelectItem>
                       <SelectItem value="Steel">Reinforcement Steel</SelectItem>
                       <SelectItem value="RMC">Ready Mix Concrete (RMC)</SelectItem>
-                      <SelectItem value="Bricks">Bricks / Fly Ash</SelectItem>
+                      <SelectItem value="Bricks">Bricks</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -463,13 +507,37 @@ export default function MaterialInward() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="bags">Bags</SelectItem>
+                      <SelectItem value="MT">MT (Metric Ton)</SelectItem>
                       <SelectItem value="tons">Tons</SelectItem>
                       <SelectItem value="kg">kg</SelectItem>
                       <SelectItem value="cum">Cu.M.</SelectItem>
+                      <SelectItem value="litres">Litres</SelectItem>
                       <SelectItem value="units">Units</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-1">
+                  <Label>Unit Price (₹)</Label>
+                  <Input type="number" value={editingItem.unitPrice ?? ""} onChange={e => setEditingItem({...editingItem, unitPrice: e.target.value})} />
+                </div>
+                {editingItem.materialName === "GGBS" && (
+                  <div className="space-y-1">
+                    <Label>Source Location</Label>
+                    <Input value={editingItem.sourceLocation || ""} onChange={e => setEditingItem({...editingItem, sourceLocation: e.target.value})} />
+                  </div>
+                )}
+                {editingItem.materialName === "Fly Ash" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label>Manufacturing Location</Label>
+                      <Input value={editingItem.mfgLocation || ""} onChange={e => setEditingItem({...editingItem, mfgLocation: e.target.value})} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Brand</Label>
+                      <Input value={editingItem.brand || ""} onChange={e => setEditingItem({...editingItem, brand: e.target.value})} />
+                    </div>
+                  </>
+                )}
                 <div className="space-y-1">
                   <Label>Supplier Name *</Label>
                   <Input value={editingItem.supplierName} onChange={e => setEditingItem({...editingItem, supplierName: e.target.value})} required />

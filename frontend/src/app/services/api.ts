@@ -75,7 +75,6 @@ export const fetchMaterialInwards = () => fetchRecords('material-inward');
 export const fetchRmcGrades = () => fetchRecords('rmc-grades');
 export const fetchScraps = () => fetchRecords('scrap');
 export const fetchAccountsReport = () => fetchRecords('reports/accounts');
-export const fetchBusinessReport = () => fetchRecords('reports/business');
 export const fetchEfficiencyReport = () => fetchRecords('reports/efficiency');
 export const fetchTargetsReport = () => fetchRecords('reports/targets');
 export const fetchTimeMotionReport = () => fetchRecords('reports/time-motion');
@@ -100,8 +99,22 @@ export const createMaterialInward = (data: any) => createRecord('material-inward
 export const createRmcGrade = (data: any) => createRecord('rmc-grades', data);
 export const createScrap = (data: any) => createRecord('scrap', data);
 
-export const fetchOverheadEntries = () => fetchRecords('overhead');
-export const fetchOverheadSummary = () => fetchRecords('overhead/summary');
+export const fetchOverheadEntries = (params?: { month?: string | number; year?: string | number; siteId?: string }) => {
+  const q = new URLSearchParams();
+  if (params?.month != null) q.set('month', String(params.month));
+  if (params?.year != null) q.set('year', String(params.year));
+  if (params?.siteId) q.set('siteId', params.siteId);
+  const qs = q.toString();
+  return fetchRecords(qs ? `overhead?${qs}` : 'overhead');
+};
+export const fetchOverheadSummary = (params?: { month?: string | number; year?: string | number; siteId?: string }) => {
+  const q = new URLSearchParams();
+  if (params?.month != null) q.set('month', String(params.month));
+  if (params?.year != null) q.set('year', String(params.year));
+  if (params?.siteId) q.set('siteId', params.siteId);
+  const qs = q.toString();
+  return fetchRecords(qs ? `overhead/summary?${qs}` : 'overhead/summary');
+};
 export const createOverheadEntry = (data: any) => createRecord('overhead', data);
 
 // Document Attachment Upload Helpers

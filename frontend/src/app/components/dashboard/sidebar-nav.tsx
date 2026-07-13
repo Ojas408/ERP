@@ -19,11 +19,8 @@ import {
   Settings,
   ChevronRight,
   ShoppingCart,
-  Banknote,
-  Landmark,
   Briefcase,
   HardHat,
-  Database,
   Trash2,
   Recycle,
 } from "lucide-react"
@@ -43,7 +40,6 @@ const menuItems = [
   { icon: Users, label: "Man Work Hour Report", id: "work-hour" },
   { icon: Wrench, label: "Maintenance Report", id: "maintenance" },
   { icon: DollarSign, label: "Expense Report", id: "expense" },
-  { icon: BarChart3, label: "Business Analytics", id: "analytics" },
   { icon: TrendingUp, label: "Efficiency Report", id: "efficiency" },
   { icon: Target, label: "Monthly Target Achievement", id: "target" },
   { icon: Truck, label: "Vehicle Incoming/Outgoing", id: "vehicle-io" },
@@ -53,13 +49,10 @@ const menuItems = [
   { icon: Package, label: "Material Inward", id: "material-inward" },
   { icon: Recycle, label: "Scrap Management", id: "scrap-management" },
   { icon: ShoppingCart, label: "Purchase Orders", id: "purchase-order" },
-  { icon: Banknote, label: "Payroll", id: "payroll" },
-  { icon: Landmark, label: "Accounts & Finance", id: "accounts" },
-  { icon: BarChart3, label: "Total Overhead Report", id: "overhead-report" },
+  { icon: BarChart3, label: "Monthly Overheads Report", id: "overhead-report" },
   { icon: MapPin, label: "Site Management", id: "site" },
   { icon: UserCheck, label: "Employee Management", id: "employee" },
   { icon: UsersRound, label: "Vendor Management", id: "vendor" },
-  { icon: Database, label: "Master Data", id: "master-data" },
   { icon: Settings, label: "Settings", id: "settings" },
 ]
 
@@ -74,11 +67,11 @@ const allModules = menuItems.map(m => m.id);
 const rolePermissions: Record<UserRole, string[]> = {
   "Super Admin": allModules,
   "Admin": allModules.filter(m => m !== "settings"),
-  "HR": ["dashboard", "workers", "employee", "payroll", "work-hour"],
-  "Accounts": ["dashboard", "projects", "workers", "equipment", "expense", "accounts", "analytics", "purchase-order", "vendor", "payroll", "challan", "overhead-report", "material-inward", "scrap-management"],
+  "HR": ["dashboard", "workers", "employee", "work-hour"],
+  "Accounts": ["dashboard", "projects", "workers", "equipment", "expense", "purchase-order", "vendor", "challan", "overhead-report", "material-inward", "scrap-management"],
   "Purchase": ["dashboard", "projects", "equipment", "vendor", "purchase-order", "inventory", "challan", "material-inward", "scrap-management", "rmc-grade"],
   "Site Engineer": ["dashboard", "projects", "workers", "equipment", "production", "consumption", "site", "inventory", "challan", "vehicle-io", "maintenance", "material-inward", "scrap-management", "rmc-grade"],
-  "Manager": ["dashboard", "projects", "workers", "equipment", "analytics", "efficiency", "target", "time-motion", "production", "expense", "overhead-report"],
+  "Manager": ["dashboard", "projects", "workers", "equipment", "efficiency", "target", "time-motion", "production", "expense", "overhead-report"],
   "Viewer": ["dashboard", "projects", "production", "efficiency"]
 }
 

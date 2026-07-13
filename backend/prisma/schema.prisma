@@ -64,8 +64,8 @@ model Production {
   id              String   @id @default(uuid())
   date            DateTime @default(now())
   amount          Float
-  unit            String   @default("tons")
-  grade           String? // RMC grade: M20, M25, M30 etc.
+  unit            String   @default("cum") // cubic meters (cum) is primary for RMC
+  grade           String? // RMC grade: M5, M10, M15, M20, M25, M30 etc.
   productionType  String? // Slab, Column, Transit Mixture, Foundation, etc.
   siteId          String?
   site            Site?    @relation(fields: [siteId], references: [id])
@@ -81,17 +81,20 @@ model Production {
 }
 
 model Inventory {
-  id           String   @id @default(uuid())
-  itemName     String
-  quantity     Float
-  unit         String
-  minThreshold Float    @default(0)
-  price        Float?
-  category     String?
-  tenantId     String
-  tenant       Tenant   @relation(fields: [tenantId], references: [id])
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id             String   @id @default(uuid())
+  itemName       String
+  quantity       Float
+  unit           String
+  minThreshold   Float    @default(0)
+  price          Float?
+  category       String?
+  sourceLocation String? // e.g. GGBS source
+  brand          String? // e.g. Fly Ash brand
+  mfgLocation    String? // manufacturing location (Fly Ash etc.)
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Expense {
@@ -204,6 +207,11 @@ model Consumption {
   site            Site?    @relation(fields: [siteId], references: [id])
   isRejected      Boolean  @default(false)
   rejectionReason String?
+  unitPrice       Float? // avg purchase/rate used for cost
+  sourceLocation  String? // GGBS source location
+  brand           String? // Fly Ash brand
+  mfgLocation     String? // Fly Ash manufacturing location
+  customData      Json?
   tenantId        String
   tenant          Tenant   @relation(fields: [tenantId], references: [id])
   createdAt       DateTime @default(now())
@@ -345,23 +353,27 @@ model AuditLog {
 }
 
 model MaterialInward {
-  id            String   @id @default(uuid())
-  inwardNumber  String
-  date          DateTime @default(now())
-  materialName  String
-  quantity      Float
-  unit          String
-  supplierName  String
-  vehicleNumber String?
-  challanNumber String?
-  siteId        String
-  site          Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
-  receivedBy    String?
-  remarks       String?
-  tenantId      String
-  tenant        Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(uuid())
+  inwardNumber   String
+  date           DateTime @default(now())
+  materialName   String
+  quantity       Float
+  unit           String
+  supplierName   String
+  vehicleNumber  String?
+  challanNumber  String?
+  siteId         String
+  site           Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  receivedBy     String?
+  remarks        String?
+  unitPrice      Float? // purchase rate (₹ per unit / MT)
+  sourceLocation String? // GGBS source location
+  brand          String? // Fly Ash brand
+  mfgLocation    String? // Fly Ash manufacturing location
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@unique([inwardNumber, tenantId])
 }
@@ -403,14 +415,15 @@ model Scrap {
 model OverheadEntry {
   id          String   @id @default(uuid())
   date        DateTime @default(now())
-  category    String // Transit Mixture, Slabs, Cement, Aggregate, Labour, Fuel, Maintenance, Other
+  // Machinery | Fuel | Raw Material | Manpower | Electricity | Maintenance | Scrap | legacy categories
+  category    String
   description String?
   quantity    Float?
-  unit        String? // cum, sqm, bags, tons, trips
+  unit        String? // cum, sqm, bags, tons, trips, litres, MT
   amount      Float
   siteId      String?
   site        Site?    @relation(fields: [siteId], references: [id], onDelete: SetNull)
-  customData  Json?
+  customData  Json? // rate, remarks, personnelDetails, plantName, monthYearStr, avgFuelConsumption, costPerCuM
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())

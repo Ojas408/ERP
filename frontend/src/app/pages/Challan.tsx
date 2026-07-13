@@ -105,11 +105,13 @@ export default function Challan() {
   const loadData = async () => {
     try {
       setLoading(true)
+      console.log("[Challan] Loading data...")
       const [challanData, vehicleData, siteData] = await Promise.all([
         fetchChallans(),
         fetchVehicles(),
         fetchRecords("sites")
       ])
+      console.log("[Challan] Data loaded:", { challanCount: challanData?.length, vehicleCount: vehicleData?.length, siteCount: siteData?.length })
       setChallans(Array.isArray(challanData) ? challanData : [])
       setVehicles(Array.isArray(vehicleData) ? vehicleData : [])
       setSites(Array.isArray(siteData) ? siteData : [])

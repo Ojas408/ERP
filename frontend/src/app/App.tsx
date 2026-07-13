@@ -22,14 +22,10 @@ import TimeMotionPage from "./pages/TimeMotion"
 import ChallanPage from "./pages/Challan"
 import InventoryPage from "./pages/Inventory"
 import PurchaseOrderPage from "./pages/PurchaseOrder"
-import PayrollPage from "./pages/Payroll"
-import AccountsPage from "./pages/Accounts"
 import SiteManagementPage from "./pages/SiteManagement"
 import EmployeeManagementPage from "./pages/EmployeeManagement"
 import VendorManagementPage from "./pages/VendorManagement"
-import BusinessReportPage from "./pages/BusinessReport"
 import SettingsPage from "./pages/Settings"
-import MasterDataPage from "./pages/MasterData"
 import MaterialInwardPage from "./pages/MaterialInward"
 import RMCGradePage from "./pages/RMCGrade"
 import ScrapManagementPage from "./pages/ScrapManagement"
@@ -70,7 +66,6 @@ function AppContent() {
               {activeModule === "work-hour" && <WorkHoursPage />}
               {activeModule === "maintenance" && <MaintenancePage />}
               {activeModule === "expense" && <ExpensesPage />}
-              {activeModule === "analytics" && <BusinessReportPage />}
               {activeModule === "efficiency" && <EfficiencyPage />}
               {activeModule === "target" && <TargetAchievementPage />}
               {activeModule === "vehicle-io" && <VehicleMovementPage />}
@@ -81,18 +76,18 @@ function AppContent() {
               {activeModule === "rmc-grade" && <RMCGradePage />}
               {activeModule === "scrap-management" && <ScrapManagementPage />}
               {activeModule === "purchase-order" && <PurchaseOrderPage />}
-              {activeModule === "payroll" && <PayrollPage />}
-              {activeModule === "accounts" && <AccountsPage />}
+              {activeModule === "payroll" && <div className="text-center py-12 text-muted-foreground">Payroll module - coming soon</div>}
+              {activeModule === "accounts" && <div className="text-center py-12 text-muted-foreground">Accounts & Finance module - coming soon</div>}
               {activeModule === "overhead-report" && <OverheadReportPage />}
               {activeModule === "site" && <SiteManagementPage />}
               {activeModule === "employee" && <EmployeeManagementPage />}
               {activeModule === "vendor" && <VendorManagementPage />}
               {activeModule === "settings" && <SettingsPage />}
-              {activeModule === "master-data" && <MasterDataPage />}
+              {activeModule === "master-data" && <div className="text-center py-12 text-muted-foreground">Master Data module - coming soon</div>}
 
               {![
                 "dashboard", "projects", "workers", "equipment", "production", "consumption", 
-                "work-hour", "maintenance", "expense", "analytics", "efficiency", "target", 
+                "work-hour", "maintenance", "expense", "efficiency", "target", 
                 "vehicle-io", "time-motion", "challan", "inventory", "material-inward", 
                 "rmc-grade", "scrap-management", "purchase-order", "payroll", "accounts", 
                 "overhead-report", "site", "employee", "vendor", "settings", "master-data"

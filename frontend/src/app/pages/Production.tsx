@@ -7,7 +7,7 @@ import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
 import { Factory, TrendingUp, Target, Activity, Upload, Download, Plus, Edit, Trash2, Eye, RefreshCw, FileSpreadsheet, Settings2 } from "lucide-react"
-import { fetchProductions, createProduction, fetchSites, fetchRmcGrades, deleteRecord, updateRecord, fetchCustomColumns } from "../services/api"
+import { fetchProductions, createProduction, fetchSites, fetchRmcGrades, createRmcGrade, deleteRecord, updateRecord, fetchCustomColumns } from "../services/api"
 import {
   Dialog,
   DialogContent,
@@ -31,6 +31,8 @@ export default function Production() {
   const [loading, setLoading] = useState(true)
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
+  const [isAddGradeOpen, setIsAddGradeOpen] = useState(false)
+  const [newGradeName, setNewGradeName] = useState("")
   const [editingItem, setEditingItem] = useState<any>(null)
   const [newProd, setNewProd] = useState({
     siteId: "",
@@ -155,6 +157,22 @@ export default function Production() {
       loadData()
     } catch (error) {
       console.error("Failed to delete production:", error)
+    }
+  }
+
+  const handleAddGrade = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const grade = newGradeName.trim().toUpperCase()
+    if (!grade) return
+    try {
+      await createRmcGrade({ grade })
+      setNewGradeName("")
+      setIsAddGradeOpen(false)
+      const gradeData = await fetchRmcGrades()
+      setRmcGrades(Array.isArray(gradeData) ? gradeData : [])
+      setNewProd((prev) => ({ ...prev, grade }))
+    } catch (error) {
+      console.error("Failed to add grade:", error)
     }
   }
 
@@ -352,13 +370,25 @@ export default function Production() {
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="grade">RMC Grade *</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="grade">RMC Grade *</Label>
+                      <button
+                        type="button"
+                        className="text-[11px] text-blue-600 hover:underline font-medium"
+                        onClick={() => setIsAddGradeOpen(true)}
+                      >
+                        + Add Grade
+                      </button>
+                    </div>
                     <Select value={newProd.grade} onValueChange={v => setNewProd({...newProd, grade: v})}>
                       <SelectTrigger id="grade"><SelectValue placeholder="Select grade" /></SelectTrigger>
                       <SelectContent>
                         {rmcGrades.map(g => (
                           <SelectItem key={g.id} value={g.grade}>{g.grade} {g.description ? `- ${g.description}` : ''}</SelectItem>
                         ))}
+                        <SelectItem value="M5">M5</SelectItem>
+                        <SelectItem value="M10">M10</SelectItem>
+                        <SelectItem value="M15">M15</SelectItem>
                         <SelectItem value="M20">M20</SelectItem>
                         <SelectItem value="M25">M25</SelectItem>
                         <SelectItem value="M30">M30</SelectItem>
@@ -675,6 +705,9 @@ export default function Production() {
                       {rmcGrades.map(g => (
                         <SelectItem key={g.id} value={g.grade}>{g.grade}</SelectItem>
                       ))}
+                      <SelectItem value="M5">M5</SelectItem>
+                      <SelectItem value="M10">M10</SelectItem>
+                      <SelectItem value="M15">M15</SelectItem>
                       <SelectItem value="M20">M20</SelectItem>
                       <SelectItem value="M25">M25</SelectItem>
                       <SelectItem value="M30">M30</SelectItem>
@@ -712,6 +745,30 @@ export default function Production() {
               </DialogFooter>
             </form>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAddGradeOpen} onOpenChange={setIsAddGradeOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add RMC Grade</DialogTitle>
+            <DialogDescription>Add a new concrete grade (e.g. M5, M10, M40)</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleAddGrade} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Grade Name</Label>
+              <Input
+                placeholder="M5"
+                value={newGradeName}
+                onChange={(e) => setNewGradeName(e.target.value)}
+                required
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsAddGradeOpen(false)}>Cancel</Button>
+              <Button type="submit">Save Grade</Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
 
