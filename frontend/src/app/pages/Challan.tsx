@@ -96,21 +96,7 @@ export default function Challan() {
   })
 
   const [editingItem, setEditingItem] = useState<any>(null)
-  const [trafficChallans, setTrafficChallans] = useState<any[]>([
-    {
-      id: "tc-1",
-      challanNumber: "TRF-2026-0001",
-      date: new Date().toISOString().split("T")[0],
-      vehicleId: "",
-      vehiclePlateNumber: "UP16 AB 4582",
-    violationType: "Overspeeding",
-      location: "Noida Sector 128",
-      fineAmount: 2000,
-      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      status: "unpaid",
-      remarks: "Awaiting driver confirmation",
-    },
-  ])
+  const [trafficChallans, setTrafficChallans] = useState<any[]>([])
   const [trafficFilter, setTrafficFilter] = useState("all")
   const [newTrafficChallan, setNewTrafficChallan] = useState({
     challanNumber: `TRF-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -436,20 +422,40 @@ export default function Challan() {
     toast.success("Traffic challan recorded")
   }
 
-  const handleTrafficStatus = (id: string, status: string) => {
-    setTrafficChallans(prev => prev.map(row => row.id === id ? { ...row, status } : row))
-    toast.success(`Traffic challan marked ${status}`)
+  const handleTrafficStatus = async (id: string, status: string) => {
+    const apiRow = challans.find(row => row.id === id && isTrafficChallanRecord(row))
+    try {
+      if (apiRow) {
+        await updateRecord("challans", id, { ...apiRow, status })
+        loadData()
+      } else {
+        setTrafficChallans(prev => prev.map(row => row.id === id ? { ...row, status } : row))
+      }
+      toast.success(`Traffic challan marked ${status}`)
+    } catch {
+      toast.error("Failed to update traffic challan")
+    }
   }
 
-  const handleDeleteTraffic = (id: string) => {
+  const handleDeleteTraffic = async (id: string) => {
     if (!confirm("Delete this traffic challan record?")) return
-    setTrafficChallans(prev => prev.filter(row => row.id !== id))
-    toast.success("Traffic challan deleted")
+    const apiRow = challans.find(row => row.id === id && isTrafficChallanRecord(row))
+    try {
+      if (apiRow) {
+        await deleteRecord("challans", id)
+        loadData()
+      } else {
+        setTrafficChallans(prev => prev.filter(row => row.id !== id))
+      }
+      toast.success("Traffic challan deleted")
+    } catch {
+      toast.error("Failed to delete traffic challan")
+    }
   }
 
   const handleExportTrafficExcel = () => {
     exportToExcel(
-      trafficChallans.map(row => ({
+      allTrafficChallans.map(row => ({
         challanNumber: row.challanNumber,
         date: row.date,
         vehiclePlateNumber: row.vehiclePlateNumber,
@@ -464,8 +470,43 @@ export default function Challan() {
     )
   }
 
+  const isTrafficChallanRecord = (row: any) => {
+    const refNo = String(row.challanNumber || "").toUpperCase()
+    const material = String(row.material || "").toLowerCase()
+    return (
+      refNo.startsWith("TRF-") ||
+      material.includes("overload") ||
+      material.includes("speed") ||
+      material.includes("fitness") ||
+      material.includes("traffic") ||
+      material.includes("fine") ||
+      material.includes("parking") ||
+      material.includes("signal") ||
+      material.includes("document")
+    )
+  }
+
+  const toTrafficChallan = (row: any) => ({
+    id: row.id,
+    challanNumber: row.challanNumber,
+    date: row.date,
+    vehicleId: row.vehicleId || "",
+    vehiclePlateNumber: row.vehicle?.plateNumber || row.vehiclePlateNumber || "N/A",
+    violationType: row.material || row.violationType || "Traffic Violation",
+    location: row.destination || row.location || "",
+    fineAmount: Number(row.quantity || row.fineAmount || 0),
+    dueDate: row.dueDate || "",
+    status: row.status === "paid" ? "paid" : row.status === "contested" ? "contested" : "unpaid",
+    remarks: row.remarks || "",
+    source: "api",
+  })
+
+  const deliveryChallans = challans.filter(c => !isTrafficChallanRecord(c))
+  const apiTrafficChallans = challans.filter(isTrafficChallanRecord).map(toTrafficChallan)
+  const allTrafficChallans = [...apiTrafficChallans, ...trafficChallans]
+
   // Filters calculation
-  const filteredChallans = challans.filter(c => {
+  const filteredChallans = deliveryChallans.filter(c => {
     const plate = c.vehicle?.plateNumber || ""
     const mat = c.material || ""
     const dest = c.destination || ""
@@ -487,15 +528,15 @@ export default function Challan() {
   const paginatedChallans = filteredChallans.slice((currentPage - 1) * pageSize, currentPage * pageSize)
 
   // KPI widgets
-  const draftCount = challans.filter(c => c.status === "draft" || c.status === "pending").length
-  const approvedCount = challans.filter(c => c.status === "approved").length
-  const transitCount = challans.filter(c => c.status === "dispatched").length
-  const deliveredCount = challans.filter(c => c.status === "delivered").length
-  const filteredTrafficChallans = trafficChallans.filter(row => trafficFilter === "all" || row.status === trafficFilter)
-  const unpaidTrafficCount = trafficChallans.filter(row => row.status === "unpaid").length
-  const paidTrafficCount = trafficChallans.filter(row => row.status === "paid").length
-  const contestedTrafficCount = trafficChallans.filter(row => row.status === "contested").length
-  const totalTrafficFine = trafficChallans.reduce((sum, row) => sum + (Number(row.fineAmount) || 0), 0)
+  const draftCount = deliveryChallans.filter(c => c.status === "draft" || c.status === "pending").length
+  const approvedCount = deliveryChallans.filter(c => c.status === "approved").length
+  const transitCount = deliveryChallans.filter(c => c.status === "dispatched").length
+  const deliveredCount = deliveryChallans.filter(c => c.status === "delivered").length
+  const filteredTrafficChallans = allTrafficChallans.filter(row => trafficFilter === "all" || row.status === trafficFilter)
+  const unpaidTrafficCount = allTrafficChallans.filter(row => row.status === "unpaid").length
+  const paidTrafficCount = allTrafficChallans.filter(row => row.status === "paid").length
+  const contestedTrafficCount = allTrafficChallans.filter(row => row.status === "contested").length
+  const totalTrafficFine = allTrafficChallans.reduce((sum, row) => sum + (Number(row.fineAmount) || 0), 0)
 
   return (
     <div className="space-y-6">
