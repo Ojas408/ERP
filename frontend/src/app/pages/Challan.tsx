@@ -58,6 +58,7 @@ export default function Challan() {
   const [vehicles, setVehicles] = useState<any[]>([])
   const [sites, setSites] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeSection, setActiveSection] = useState<"delivery" | "traffic">("delivery")
 
   // Search & Filters
   const [searchQuery, setSearchQuery] = useState("")
@@ -74,6 +75,7 @@ export default function Challan() {
   const [isDocsOpen, setIsDocsOpen] = useState(false)
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false)
   const [selectedChallan, setSelectedChallan] = useState<any>(null)
+  const [isTrafficAddOpen, setIsTrafficAddOpen] = useState(false)
 
   // Sub-list States
   const [docsList, setDocsList] = useState<any[]>([])
@@ -94,6 +96,34 @@ export default function Challan() {
   })
 
   const [editingItem, setEditingItem] = useState<any>(null)
+  const [trafficChallans, setTrafficChallans] = useState<any[]>([
+    {
+      id: "tc-1",
+      challanNumber: "TRF-2026-0001",
+      date: new Date().toISOString().split("T")[0],
+      vehicleId: "",
+      vehiclePlateNumber: "UP16 AB 4582",
+    violationType: "Overspeeding",
+      location: "Noida Sector 128",
+      fineAmount: 2000,
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      status: "unpaid",
+      remarks: "Awaiting driver confirmation",
+    },
+  ])
+  const [trafficFilter, setTrafficFilter] = useState("all")
+  const [newTrafficChallan, setNewTrafficChallan] = useState({
+    challanNumber: `TRF-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    date: new Date().toISOString().split("T")[0],
+    vehicleId: "",
+    vehiclePlateNumber: "",
+    violationType: "No Parking",
+    location: "",
+    fineAmount: "",
+    dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    status: "unpaid",
+    remarks: "",
+  })
 
   // SheetJS Import Preview States
   const [importData, setImportData] = useState<any[]>([])
@@ -380,6 +410,60 @@ export default function Challan() {
     printReport("Delivery Challans Log Ledger", ["Challan No.", "Date", "Vehicle", "Material", "Quantity", "Destination", "Status"], rows)
   }
 
+  const handleAddTrafficChallan = (e: React.FormEvent) => {
+    e.preventDefault()
+    const vehicle = vehicles.find(v => v.id === newTrafficChallan.vehicleId)
+    const record = {
+      ...newTrafficChallan,
+      id: `tc-${Date.now()}`,
+      vehiclePlateNumber: vehicle?.plateNumber || newTrafficChallan.vehiclePlateNumber,
+      fineAmount: parseFloat(newTrafficChallan.fineAmount) || 0,
+    }
+    setTrafficChallans(prev => [record, ...prev])
+    setIsTrafficAddOpen(false)
+    setNewTrafficChallan({
+      challanNumber: `TRF-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+      date: new Date().toISOString().split("T")[0],
+      vehicleId: "",
+      vehiclePlateNumber: "",
+      violationType: "No Parking",
+      location: "",
+      fineAmount: "",
+      dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      status: "unpaid",
+      remarks: "",
+    })
+    toast.success("Traffic challan recorded")
+  }
+
+  const handleTrafficStatus = (id: string, status: string) => {
+    setTrafficChallans(prev => prev.map(row => row.id === id ? { ...row, status } : row))
+    toast.success(`Traffic challan marked ${status}`)
+  }
+
+  const handleDeleteTraffic = (id: string) => {
+    if (!confirm("Delete this traffic challan record?")) return
+    setTrafficChallans(prev => prev.filter(row => row.id !== id))
+    toast.success("Traffic challan deleted")
+  }
+
+  const handleExportTrafficExcel = () => {
+    exportToExcel(
+      trafficChallans.map(row => ({
+        challanNumber: row.challanNumber,
+        date: row.date,
+        vehiclePlateNumber: row.vehiclePlateNumber,
+        violationType: row.violationType,
+        location: row.location,
+        fineAmount: row.fineAmount,
+        dueDate: row.dueDate,
+        status: row.status,
+        remarks: row.remarks,
+      })),
+      "vehicle_traffic_challans"
+    )
+  }
+
   // Filters calculation
   const filteredChallans = challans.filter(c => {
     const plate = c.vehicle?.plateNumber || ""
@@ -407,16 +491,22 @@ export default function Challan() {
   const approvedCount = challans.filter(c => c.status === "approved").length
   const transitCount = challans.filter(c => c.status === "dispatched").length
   const deliveredCount = challans.filter(c => c.status === "delivered").length
+  const filteredTrafficChallans = trafficChallans.filter(row => trafficFilter === "all" || row.status === trafficFilter)
+  const unpaidTrafficCount = trafficChallans.filter(row => row.status === "unpaid").length
+  const paidTrafficCount = trafficChallans.filter(row => row.status === "paid").length
+  const contestedTrafficCount = trafficChallans.filter(row => row.status === "contested").length
+  const totalTrafficFine = trafficChallans.reduce((sum, row) => sum + (Number(row.fineAmount) || 0), 0)
 
   return (
     <div className="space-y-6">
       {/* Page Title & Toolbar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl mb-1 font-bold tracking-tight text-slate-800 dark:text-white">Delivery Challan Center</h1>
-          <p className="text-sm text-muted-foreground font-medium">Issue and track raw material dispatch slips, weight receipts, status lifecycles, and printable challans</p>
+          <h1 className="text-3xl mb-1 font-bold tracking-tight text-slate-800 dark:text-white">Challan Management</h1>
+          <p className="text-sm text-muted-foreground font-medium">Manage delivery challans separately from vehicle traffic challans and fines</p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        {activeSection === "delivery" && (
+          <div className="flex flex-wrap gap-2">
           <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -470,7 +560,7 @@ export default function Challan() {
                     </Select>
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="material">Material Name</Label>
+                    <Label htmlFor="material">Delivery Material Type</Label>
                     <Select value={newChallan.material} onValueChange={v => setNewChallan({...newChallan, material: v})}>
                       <SelectTrigger id="material"><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -518,8 +608,30 @@ export default function Challan() {
             </DialogContent>
           </Dialog>
         </div>
+        )}
       </div>
 
+      <div className="flex flex-wrap gap-2 rounded-md border bg-muted/20 p-1 w-fit">
+        <Button
+          variant={activeSection === "delivery" ? "default" : "ghost"}
+          className="h-9 text-xs"
+          onClick={() => setActiveSection("delivery")}
+        >
+          <FileText className="h-4 w-4 mr-2" />
+          Delivery Challans
+        </Button>
+        <Button
+          variant={activeSection === "traffic" ? "default" : "ghost"}
+          className="h-9 text-xs"
+          onClick={() => setActiveSection("traffic")}
+        >
+          <Truck className="h-4 w-4 mr-2" />
+          Traffic Challans
+        </Button>
+      </div>
+
+      {activeSection === "delivery" ? (
+      <>
       {/* KPI Stats widgets */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard title="Draft / Pending" value={draftCount.toString()} subtitle="awaiting approval" icon={Clock} colorClass="bg-slate-50 text-slate-500" />
@@ -685,6 +797,203 @@ export default function Challan() {
           )}
         </CardContent>
       </Card>
+      </>
+      ) : (
+      <>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white">Vehicle Traffic Challans</h2>
+          <p className="text-sm text-muted-foreground">Track police/RTO fines, due dates, payment status, and vehicle responsibility.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" className="text-xs h-9 border-slate-300" onClick={handleExportTrafficExcel}>
+            <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
+            Export Traffic
+          </Button>
+          <Dialog open={isTrafficAddOpen} onOpenChange={setIsTrafficAddOpen}>
+            <DialogTrigger asChild>
+              <Button className="text-xs h-9 bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Traffic Challan
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Add Vehicle Traffic Challan</DialogTitle>
+                <DialogDescription>Record fines issued against company vehicles.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleAddTrafficChallan} className="space-y-4 py-2">
+                <div className="grid grid-cols-2 gap-3 text-xs">
+                  <div className="space-y-1 col-span-2">
+                    <Label>Traffic Challan Number *</Label>
+                    <Input value={newTrafficChallan.challanNumber} onChange={e => setNewTrafficChallan({...newTrafficChallan, challanNumber: e.target.value})} required />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Issue Date</Label>
+                    <Input type="date" value={newTrafficChallan.date} onChange={e => setNewTrafficChallan({...newTrafficChallan, date: e.target.value})} required />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Due Date</Label>
+                    <Input type="date" value={newTrafficChallan.dueDate} onChange={e => setNewTrafficChallan({...newTrafficChallan, dueDate: e.target.value})} />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label>Vehicle</Label>
+                    <Select value={newTrafficChallan.vehicleId} onValueChange={v => {
+                      const vehicle = vehicles.find(item => item.id === v)
+                      setNewTrafficChallan({...newTrafficChallan, vehicleId: v, vehiclePlateNumber: vehicle?.plateNumber || ""})
+                    }}>
+                      <SelectTrigger><SelectValue placeholder="Select vehicle" /></SelectTrigger>
+                      <SelectContent>
+                        {vehicles.map(v => <SelectItem key={v.id} value={v.id}>{v.plateNumber} ({v.model})</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label>Vehicle Plate Number *</Label>
+                    <Input value={newTrafficChallan.vehiclePlateNumber} onChange={e => setNewTrafficChallan({...newTrafficChallan, vehiclePlateNumber: e.target.value})} required />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Violation Type</Label>
+                    <Select value={newTrafficChallan.violationType} onValueChange={v => setNewTrafficChallan({...newTrafficChallan, violationType: v})}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="No Parking">No Parking</SelectItem>
+                        <SelectItem value="Overspeeding">Overspeeding</SelectItem>
+                        <SelectItem value="Signal Jump">Signal Jump</SelectItem>
+                        <SelectItem value="Overloading Traffic Fine">Overloading (Traffic Fine)</SelectItem>
+                        <SelectItem value="Document Missing">Document Missing</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Fine Amount</Label>
+                    <Input type="number" value={newTrafficChallan.fineAmount} onChange={e => setNewTrafficChallan({...newTrafficChallan, fineAmount: e.target.value})} required />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label>Location</Label>
+                    <Input value={newTrafficChallan.location} onChange={e => setNewTrafficChallan({...newTrafficChallan, location: e.target.value})} placeholder="e.g. Noida Sector 128" />
+                  </div>
+                  <div className="space-y-1 col-span-2">
+                    <Label>Remarks</Label>
+                    <Input value={newTrafficChallan.remarks} onChange={e => setNewTrafficChallan({...newTrafficChallan, remarks: e.target.value})} />
+                  </div>
+                </div>
+                <DialogFooter className="pt-2">
+                  <Button type="button" variant="outline" onClick={() => setIsTrafficAddOpen(false)}>Cancel</Button>
+                  <Button type="submit">Save Traffic Challan</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard title="Unpaid Challans" value={unpaidTrafficCount.toString()} subtitle="needs payment" icon={Clock} colorClass="bg-red-50 text-red-600" />
+        <KPICard title="Paid Challans" value={paidTrafficCount.toString()} subtitle="closed fines" icon={CheckCircle} colorClass="bg-green-50 text-green-600" />
+        <KPICard title="Contested" value={contestedTrafficCount.toString()} subtitle="under review" icon={FileText} colorClass="bg-amber-50 text-amber-600" />
+        <KPICard title="Total Fine Amount" value={`₹${totalTrafficFine.toLocaleString("en-IN")}`} subtitle="all traffic fines" icon={TrendingUp} colorClass="bg-blue-50 text-blue-600" />
+      </div>
+
+      <Card className="p-4 bg-muted/20 border-slate-200 shadow-sm">
+        <div className="flex flex-col md:flex-row gap-3 items-center justify-between">
+          <div className="relative w-full md:max-w-md">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by plate, challan no., violation, or location..."
+              className="pl-9 text-xs h-9 bg-background border-slate-300"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Select value={trafficFilter} onValueChange={setTrafficFilter}>
+            <SelectTrigger className="w-[180px] text-xs h-9 bg-background border-slate-300"><SelectValue placeholder="Status Filter" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Traffic Statuses</SelectItem>
+              <SelectItem value="unpaid">Unpaid</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="contested">Contested</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </Card>
+
+      <Card className="border-slate-200 shadow-sm">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-bold text-slate-800 dark:text-white">Traffic Challan Register</CardTitle>
+          <CardDescription>Vehicle fine ledger with due dates and payment workflow.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-md border border-slate-200 overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-slate-50 dark:bg-slate-800">
+                <TableRow>
+                  <TableHead>Challan No.</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Vehicle</TableHead>
+                  <TableHead>Violation</TableHead>
+                  <TableHead>Location</TableHead>
+                  <TableHead>Fine</TableHead>
+                  <TableHead>Due Date</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredTrafficChallans.length === 0 ? (
+                  <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground text-xs">No traffic challans recorded.</TableCell></TableRow>
+                ) : (
+                  filteredTrafficChallans
+                    .filter(row => {
+                      const q = searchQuery.toLowerCase()
+                      return !q || [row.challanNumber, row.vehiclePlateNumber, row.violationType, row.location].some(value => String(value || "").toLowerCase().includes(q))
+                    })
+                    .map(row => (
+                      <TableRow key={row.id}>
+                        <TableCell className="text-xs font-semibold font-mono text-blue-600">{row.challanNumber}</TableCell>
+                        <TableCell className="text-xs">{new Date(row.date).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-xs font-semibold font-mono">{row.vehiclePlateNumber}</TableCell>
+                        <TableCell className="text-xs">{row.violationType}</TableCell>
+                        <TableCell className="text-xs">{row.location || "N/A"}</TableCell>
+                        <TableCell className="text-xs font-semibold">₹{Number(row.fineAmount || 0).toLocaleString("en-IN")}</TableCell>
+                        <TableCell className="text-xs">{row.dueDate ? new Date(row.dueDate).toLocaleDateString() : "N/A"}</TableCell>
+                        <TableCell>
+                          <Badge className={`text-[10px] h-5 uppercase font-bold ${
+                            row.status === "paid" ? "bg-green-100 text-green-800 border-green-200" :
+                            row.status === "contested" ? "bg-amber-100 text-amber-800 border-amber-200" :
+                            "bg-red-100 text-red-800 border-red-200"
+                          }`}>
+                            {row.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex gap-1 justify-end">
+                            {row.status !== "paid" && (
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-green-700" onClick={() => handleTrafficStatus(row.id, "paid")}>
+                                Paid
+                              </Button>
+                            )}
+                            {row.status !== "contested" && (
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] text-amber-700" onClick={() => handleTrafficStatus(row.id, "contested")}>
+                                Contest
+                              </Button>
+                            )}
+                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive" onClick={() => handleDeleteTraffic(row.id)}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+      </>
+      )}
 
       {/* Edit Challan Dialog */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
