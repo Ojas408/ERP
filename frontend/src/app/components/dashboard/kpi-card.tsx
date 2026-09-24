@@ -12,11 +12,18 @@ interface KPICardProps {
   }
   subtitle?: string
   colorClass?: string
+  onClick?: () => void
 }
 
-export function KPICard({ title, value, icon: Icon, trend, subtitle, colorClass }: KPICardProps) {
+export function KPICard({ title, value, icon: Icon, trend, subtitle, colorClass, onClick }: KPICardProps) {
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+    <Card 
+      className={cn(
+        "overflow-hidden transition-all duration-200",
+        onClick ? "cursor-pointer hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700" : "hover:shadow-lg"
+      )}
+      onClick={onClick}
+    >
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex-1">

@@ -34,6 +34,7 @@ const createRmcGrade = async (req, res) => {
                 waterCementRatio: waterCementRatio ? parseFloat(waterCementRatio) : null,
                 admixture,
                 description,
+                customData: req.body.customData || undefined,
             },
         });
         await (0, audit_1.logActivity)(userId, email, tenantId, 'CREATE', 'RMCGrade', `Created RMC Grade: ${rmcGrade.grade}`);
@@ -60,6 +61,7 @@ const updateRmcGrade = async (req, res) => {
                 waterCementRatio: waterCementRatio !== undefined ? (waterCementRatio ? parseFloat(waterCementRatio) : null) : undefined,
                 admixture,
                 description,
+                customData: req.body.customData !== undefined ? req.body.customData : undefined,
             },
         });
         const rmcGrade = await prisma_1.default.rMCGrade.findFirst({ where: { id, tenantId } });

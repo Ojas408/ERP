@@ -14,7 +14,6 @@ import {
   Search, 
   ChevronLeft, 
   ChevronRight,
-  ChevronRight,
   ClipboardList,
   Download,
   Upload,
