@@ -41,6 +41,7 @@ const createProduction = async (req, res) => {
                     isRejected: item.isRejected === true || item.isRejected === 'true',
                     rejectionReason: item.rejectionReason || null,
                     date: item.date ? new Date(item.date) : new Date(),
+                    customData: item.customData || undefined,
                 }
             })));
             await (0, audit_1.logActivity)(userId, email, tenantId, 'BULK_CREATE', 'Production', `Imported ${productions.length} production logs`);
@@ -61,6 +62,7 @@ const createProduction = async (req, res) => {
                     isRejected: data.isRejected === true || data.isRejected === 'true',
                     rejectionReason: data.rejectionReason || null,
                     date: data.date ? new Date(data.date) : undefined,
+                    customData: data.customData || undefined,
                 },
             });
             await (0, audit_1.logActivity)(userId, email, tenantId, 'CREATE', 'Production', `Created production log amount: ${production.amount}`);
@@ -107,6 +109,7 @@ const updateProduction = async (req, res) => {
                 isRejected: isRejected !== undefined ? (isRejected === true || isRejected === 'true') : undefined,
                 rejectionReason,
                 date: date ? new Date(date) : undefined,
+                customData: req.body.customData !== undefined ? req.body.customData : undefined,
             },
         });
         const production = await prisma_1.default.production.findFirst({ where: { id, tenantId } });

@@ -5,6 +5,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteConsumption = exports.updateConsumption = exports.createConsumption = exports.getConsumptions = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
+function parseOptionalFloat(v) {
+    if (v === undefined || v === null || v === '')
+        return null;
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : null;
+}
 const getConsumptions = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
@@ -23,22 +29,28 @@ exports.getConsumptions = getConsumptions;
 const createConsumption = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const { material, amount, unit, siteId, date, isRejected, rejectionReason } = req.body;
+        const { material, amount, unit, siteId, date, isRejected, rejectionReason, unitPrice, sourceLocation, brand, mfgLocation, customData, } = req.body;
         const consumption = await prisma_1.default.consumption.create({
             data: {
                 tenantId,
                 material,
                 amount: parseFloat(amount),
                 unit,
-                siteId,
+                siteId: siteId || null,
                 isRejected: isRejected === true || isRejected === 'true',
                 rejectionReason: rejectionReason || null,
                 date: date ? new Date(date) : new Date(),
+                unitPrice: parseOptionalFloat(unitPrice),
+                sourceLocation: sourceLocation || null,
+                brand: brand || null,
+                mfgLocation: mfgLocation || null,
+                customData: customData || undefined,
             },
         });
         res.json(consumption);
     }
     catch (error) {
+        console.error(error);
         res.status(500).json({ error: 'Failed to create consumption' });
     }
 };
@@ -47,7 +59,7 @@ const updateConsumption = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
         const id = req.params.id;
-        const { material, amount, unit, siteId, date, isRejected, rejectionReason } = req.body;
+        const { material, amount, unit, siteId, date, isRejected, rejectionReason, unitPrice, sourceLocation, brand, mfgLocation, customData, } = req.body;
         await prisma_1.default.consumption.updateMany({
             where: { id, tenantId },
             data: {
@@ -55,15 +67,21 @@ const updateConsumption = async (req, res) => {
                 amount: amount !== undefined ? parseFloat(amount) : undefined,
                 unit,
                 siteId,
-                isRejected: isRejected !== undefined ? (isRejected === true || isRejected === 'true') : undefined,
+                isRejected: isRejected !== undefined ? isRejected === true || isRejected === 'true' : undefined,
                 rejectionReason,
                 date: date ? new Date(date) : undefined,
+                unitPrice: unitPrice !== undefined ? parseOptionalFloat(unitPrice) : undefined,
+                sourceLocation: sourceLocation !== undefined ? sourceLocation || null : undefined,
+                brand: brand !== undefined ? brand || null : undefined,
+                mfgLocation: mfgLocation !== undefined ? mfgLocation || null : undefined,
+                customData: customData !== undefined ? customData : undefined,
             },
         });
         const consumption = await prisma_1.default.consumption.findFirst({ where: { id, tenantId } });
         res.json(consumption);
     }
     catch (error) {
+        console.error(error);
         res.status(500).json({ error: 'Failed to update consumption' });
     }
 };

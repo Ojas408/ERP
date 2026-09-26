@@ -57,7 +57,7 @@ function AppContent() {
           {/* Main Content */}
           <main className="flex-1 overflow-y-auto">
             <div className="container mx-auto p-6 space-y-6">
-              {activeModule === "dashboard" && <DashboardPage />}
+              {activeModule === "dashboard" && <DashboardPage onNavigate={setActiveModule} />}
               {activeModule === "projects" && <ProjectsPage />}
               {activeModule === "workers" && <WorkersPage />}
               {activeModule === "equipment" && <EquipmentPage />}

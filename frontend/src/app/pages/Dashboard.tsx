@@ -14,6 +14,14 @@ import { Button } from "../components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Badge } from "../components/ui/badge"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "../components/ui/dialog"
+import {
   Factory,
   DollarSign,
   TrendingUp,
@@ -28,13 +36,20 @@ import {
   ClipboardList,
   Wrench,
   Clock,
-  Coins
+  Coins,
+  Package,
+  ArrowRight,
+  ShieldAlert,
 } from "lucide-react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { fetchStats } from "../services/api"
 import { toast } from "sonner"
 
-export default function Dashboard() {
+interface DashboardProps {
+  onNavigate?: (module: string) => void
+}
+
+export default function Dashboard({ onNavigate }: DashboardProps) {
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
 
@@ -81,6 +96,7 @@ export default function Dashboard() {
           subtitle="aggregated raw outputs"
           icon={Factory}
           colorClass="bg-blue-50 text-blue-600 border border-blue-100"
+          onClick={() => onNavigate?.('production')}
         />
         <KPICard
           title="Inventory Count"
@@ -88,6 +104,7 @@ export default function Dashboard() {
           subtitle="unique stock SKUs"
           icon={TrendingUp}
           colorClass="bg-emerald-50 text-emerald-600 border border-emerald-100"
+          onClick={() => onNavigate?.('inventory')}
         />
         <KPICard
           title="Disbursed Expenses"
@@ -95,6 +112,7 @@ export default function Dashboard() {
           subtitle="settled cash outflows"
           icon={DollarSign}
           colorClass="bg-orange-50 text-orange-600 border border-orange-100"
+          onClick={() => onNavigate?.('expense')}
         />
         <KPICard
           title="Available Fleet Vehicles"
@@ -102,6 +120,7 @@ export default function Dashboard() {
           subtitle="idle/ready units in yard"
           icon={Truck}
           colorClass="bg-purple-50 text-purple-600 border border-purple-100"
+          onClick={() => onNavigate?.('equipment')}
         />
       </div>
 
@@ -110,69 +129,101 @@ export default function Dashboard() {
         <h2 className="text-sm font-bold tracking-wider text-slate-500 uppercase">Operational Health Watchlist</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           
-          <Card className={`relative overflow-hidden shadow-sm transition-all duration-200 border ${stats?.lowStockMaterials > 0 ? "border-red-200 bg-red-50/20" : "border-slate-200"}`}>
+          <Card 
+            className={`relative overflow-hidden shadow-sm transition-all duration-200 border cursor-pointer hover:shadow-md ${stats?.lowStockMaterials > 0 ? "border-red-300 bg-red-50/40 hover:border-red-400" : "border-slate-200 hover:border-slate-300"}`}
+            onClick={() => onNavigate?.('inventory')}
+          >
             <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="text-xs font-bold text-slate-600 uppercase">Low Stock Materials</span>
               <AlertTriangle className={`h-4.5 w-4.5 ${stats?.lowStockMaterials > 0 ? "text-red-500 animate-pulse" : "text-slate-400"}`} />
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-bold font-mono text-slate-800 dark:text-white">
-                {stats?.lowStockMaterials ?? 0}
+              <div className="text-2xl font-bold font-mono text-slate-800 dark:text-white flex items-center justify-between">
+                <span>{stats?.lowStockMaterials ?? 0}</span>
+                <span className="text-[10px] text-red-600 dark:text-red-400 font-sans font-semibold flex items-center gap-0.5">
+                  Check <ArrowRight className="h-3 w-3" />
+                </span>
               </div>
               <p className="text-[10px] text-muted-foreground mt-1">items below minThreshold</p>
-              {stats?.lowStockMaterials > 0 && (
-                <Badge variant="destructive" className="text-[8px] h-4 mt-2 px-1 py-0 uppercase">Attention Required</Badge>
-              )}
+              {/* {stats?.lowStockMaterials > 0 && (
+                <Badge variant="destructive" className="text-[8px] h-4 mt-2 px-1.5 py-0 uppercase tracking-wider font-semibold">
+                  Attention Required
+                </Badge>
+              )} */}
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-200 shadow-sm relative overflow-hidden">
+          <Card 
+            className="border border-slate-200 shadow-sm relative overflow-hidden cursor-pointer hover:shadow-md hover:border-blue-400 transition-all duration-200"
+            onClick={() => onNavigate?.('challan')}
+          >
             <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="text-xs font-bold text-slate-600 uppercase">Pending Challans</span>
               <Clock className="h-4.5 w-4.5 text-blue-500" />
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-bold font-mono text-slate-800 dark:text-white">
-                {stats?.pendingChallans ?? 0}
+              <div className="text-2xl font-bold font-mono text-slate-800 dark:text-white flex items-center justify-between">
+                <span>{stats?.pendingChallans ?? 0}</span>
+                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-sans font-semibold flex items-center gap-0.5">
+                  Open <ArrowRight className="h-3 w-3" />
+                </span>
               </div>
               <p className="text-[10px] text-muted-foreground mt-1">slips in draft/transit</p>
             </CardContent>
           </Card>
 
-          <Card className={`relative overflow-hidden shadow-sm transition-all duration-200 border ${stats?.maintenanceDue > 0 ? "border-orange-200 bg-orange-50/20" : "border-slate-200"}`}>
+          <Card 
+            className={`relative overflow-hidden shadow-sm transition-all duration-200 border cursor-pointer hover:shadow-md ${stats?.maintenanceDue > 0 ? "border-orange-300 bg-orange-50/30 hover:border-orange-400" : "border-slate-200 hover:border-slate-300"}`}
+            onClick={() => onNavigate?.('maintenance')}
+          >
             <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="text-xs font-bold text-slate-600 uppercase">Maintenance Due</span>
               <Wrench className="h-4.5 w-4.5 text-orange-500" />
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-bold font-mono text-slate-800 dark:text-white">
-                {stats?.maintenanceDue ?? 0}
+              <div className="text-2xl font-bold font-mono text-slate-800 dark:text-white flex items-center justify-between">
+                <span>{stats?.maintenanceDue ?? 0}</span>
+                <span className="text-[10px] text-orange-600 dark:text-orange-400 font-sans font-semibold flex items-center gap-0.5">
+                  View <ArrowRight className="h-3 w-3" />
+                </span>
               </div>
               <p className="text-[10px] text-muted-foreground mt-1">machinery service pending</p>
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-200 shadow-sm relative overflow-hidden">
+          <Card 
+            className="border border-slate-200 shadow-sm relative overflow-hidden cursor-pointer hover:shadow-md hover:border-indigo-400 transition-all duration-200"
+            onClick={() => onNavigate?.('work-hour')}
+          >
             <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="text-xs font-bold text-slate-600 uppercase">Attendance Today</span>
               <ClipboardList className="h-4.5 w-4.5 text-indigo-500" />
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-bold font-mono text-slate-800 dark:text-white">
-                {stats?.attendanceToday ?? 0}
+              <div className="text-2xl font-bold font-mono text-slate-800 dark:text-white flex items-center justify-between">
+                <span>{stats?.attendanceToday ?? 0}</span>
+                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-sans font-semibold flex items-center gap-0.5">
+                  Logs <ArrowRight className="h-3 w-3" />
+                </span>
               </div>
               <p className="text-[10px] text-muted-foreground mt-1">labor logs clocked today</p>
             </CardContent>
           </Card>
 
-          <Card className="border border-slate-200 shadow-sm relative overflow-hidden">
+          <Card 
+            className="border border-slate-200 shadow-sm relative overflow-hidden cursor-pointer hover:shadow-md hover:border-yellow-400 transition-all duration-200"
+            onClick={() => onNavigate?.('expense')}
+          >
             <CardHeader className="p-4 flex flex-row items-center justify-between space-y-0 pb-2">
               <span className="text-xs font-bold text-slate-600 uppercase">Open Expenses</span>
               <Coins className="h-4.5 w-4.5 text-yellow-500" />
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="text-2xl font-bold font-mono text-slate-800 dark:text-white">
-                {stats?.openExpensesCount ?? 0}
+              <div className="text-2xl font-bold font-mono text-slate-800 dark:text-white flex items-center justify-between">
+                <span>{stats?.openExpensesCount ?? 0}</span>
+                <span className="text-[10px] text-yellow-600 dark:text-yellow-400 font-sans font-semibold flex items-center gap-0.5">
+                  Pay <ArrowRight className="h-3 w-3" />
+                </span>
               </div>
               <p className="text-[10px] text-muted-foreground mt-1">vouchers awaiting payout</p>
             </CardContent>

@@ -32,6 +32,9 @@ const createInventoryItem = async (req, res) => {
                     minThreshold: item.minThreshold ? parseFloat(item.minThreshold) : 0,
                     price: item.price ? parseFloat(item.price) : undefined,
                     category: item.category || 'General',
+                    sourceLocation: item.sourceLocation || null,
+                    brand: item.brand || null,
+                    mfgLocation: item.mfgLocation || null,
                 }
             })));
             await (0, audit_1.logActivity)(userId, email, tenantId, 'BULK_CREATE', 'Inventory', `Imported ${items.length} inventory items`);
@@ -47,6 +50,9 @@ const createInventoryItem = async (req, res) => {
                     minThreshold: data.minThreshold ? parseFloat(data.minThreshold) : 0,
                     price: data.price ? parseFloat(data.price) : undefined,
                     category: data.category,
+                    sourceLocation: data.sourceLocation || null,
+                    brand: data.brand || null,
+                    mfgLocation: data.mfgLocation || null,
                 },
             });
             await (0, audit_1.logActivity)(userId, email, tenantId, 'CREATE', 'Inventory', `Created inventory item: ${item.itemName}`);
@@ -78,7 +84,7 @@ const updateInventoryItem = async (req, res) => {
         const tenantId = req.user.tenantId;
         const { userId, email } = req.user;
         const id = req.params.id;
-        const { itemName, quantity, unit, minThreshold, price, category } = req.body;
+        const { itemName, quantity, unit, minThreshold, price, category, sourceLocation, brand, mfgLocation } = req.body;
         await prisma_1.default.inventory.updateMany({
             where: { id, tenantId },
             data: {
@@ -88,6 +94,9 @@ const updateInventoryItem = async (req, res) => {
                 minThreshold: minThreshold !== undefined ? parseFloat(minThreshold) : undefined,
                 price: price !== undefined ? parseFloat(price) : undefined,
                 category,
+                sourceLocation: sourceLocation !== undefined ? sourceLocation || null : undefined,
+                brand: brand !== undefined ? brand || null : undefined,
+                mfgLocation: mfgLocation !== undefined ? mfgLocation || null : undefined,
             },
         });
         const item = await prisma_1.default.inventory.findFirst({ where: { id, tenantId } });
