@@ -164,7 +164,7 @@ export function Navbar({ activeModule, onModuleChange }: NavbarProps) {
             <span className="font-bold">CE</span>
           </div>
           <div>
-            <h1 className="text-sm font-semibold">Construction ERP</h1>
+            <h1 className="text-sm font-semibold"> ASKSHREE MixFlow</h1>
             <p className="text-xs text-muted-foreground">Operations Control Center</p>
           </div>
         </div>

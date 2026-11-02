@@ -65,6 +65,7 @@ export const fetchEmployees = () => fetchRecords('employees');
 export const fetchVehicles = () => fetchRecords('vehicles');
 export const fetchVendors = () => fetchRecords('vendors');
 export const fetchSites = () => fetchRecords('sites');
+export const fetchSiteById = (id: string) => fetchRecords('sites/' + id);
 export const fetchConsumptions = () => fetchRecords('consumption');
 export const fetchAttendances = () => fetchRecords('attendance');
 export const fetchMaintenances = () => fetchRecords('maintenance');

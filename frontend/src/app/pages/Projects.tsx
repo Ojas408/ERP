@@ -5,8 +5,33 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
-import { MapPin, Building2, TrendingUp, DollarSign, Plus, Edit, Trash2, RefreshCw, Search, Briefcase } from "lucide-react"
-import { fetchSites, createSite, deleteRecord, updateRecord } from "../services/api"
+import {
+  MapPin,
+  Building2,
+  TrendingUp,
+  DollarSign,
+  Plus,
+  Edit,
+  Trash2,
+  RefreshCw,
+  Search,
+  Briefcase,
+  Eye,
+  Calendar,
+  User,
+  CheckCircle2,
+  Clock,
+  Activity,
+  Truck,
+  Factory,
+  Package,
+  LayoutGrid,
+  List,
+  Check,
+  ArrowUpRight,
+  Filter,
+} from "lucide-react"
+import { fetchSites, fetchSiteById, createSite, deleteRecord, updateRecord } from "../services/api"
 import {
   Dialog,
   DialogContent,
@@ -16,33 +41,54 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "../components/ui/dialog"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { exportToExcel, downloadExcelTemplate, parseExcelFile, printReport } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
+import { useSiteFilter } from "../contexts/SiteFilterContext"
 import { toast } from "sonner"
 
-export default function Projects() {
+interface ProjectsProps {
+  onNavigate?: (moduleId: string) => void
+}
+
+export default function Projects({ onNavigate }: ProjectsProps) {
   const [projects, setProjects] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table")
+
+  // Modals state
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
-  const [editingItem, setEditingItem] = useState<any>(null)
+  const [isDetailOpen, setIsDetailOpen] = useState(false)
   
+  const [editingItem, setEditingItem] = useState<any>(null)
+  const [selectedProject, setSelectedProject] = useState<any>(null)
+  const [projectDetailsLoading, setProjectDetailsLoading] = useState(false)
+
+  // Excel import
   const [importData, setImportData] = useState<any[]>([])
   const [isImportOpen, setIsImportOpen] = useState(false)
+
+  // Active site context
+  const { selectedSiteId, setSelectedSiteId } = useSiteFilter()
 
   const [newProject, setNewProject] = useState({
     name: "",
     location: "",
     status: "active",
     budget: "5000000",
+    spent: "0",
     clientName: "",
     managerName: "",
-    progress: "0"
+    progress: "0",
+    startDate: "",
+    endDate: "",
+    description: "",
   })
 
   useEffect(() => {
@@ -56,44 +102,82 @@ export default function Projects() {
       setProjects(Array.isArray(data) ? data : [])
     } catch (error) {
       console.error("Failed to load projects:", error)
+      toast.error("Failed to load projects list")
     } finally {
       setLoading(false)
     }
   }
 
+  const handleViewDetails = async (project: any) => {
+    setSelectedProject(project)
+    setIsDetailOpen(true)
+    try {
+      setProjectDetailsLoading(true)
+      const detailed = await fetchSiteById(project.id)
+      if (detailed) {
+        setSelectedProject(detailed)
+      }
+    } catch (error) {
+      console.error("Failed to fetch project details:", error)
+    } finally {
+      setProjectDetailsLoading(false)
+    }
+  }
+
+  const handleSetActiveSite = (project: any) => {
+    setSelectedSiteId(project.id)
+    toast.success(`Active ERP Workspace site set to "${project.name}"`)
+  }
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      // Create new project mapping to sites backend API
       await createSite({
         name: newProject.name,
         location: newProject.location,
         status: newProject.status,
-        // Send extra metadata fields if needed, or stick to backend model
+        clientName: newProject.clientName,
+        managerName: newProject.managerName,
+        budget: newProject.budget,
+        spent: newProject.spent,
+        progress: newProject.progress,
+        startDate: newProject.startDate || null,
+        endDate: newProject.endDate || null,
+        description: newProject.description,
       })
+      toast.success("Project created successfully")
       setIsAddOpen(false)
       setNewProject({
         name: "",
         location: "",
         status: "active",
         budget: "5000000",
+        spent: "0",
         clientName: "",
         managerName: "",
-        progress: "0"
+        progress: "0",
+        startDate: "",
+        endDate: "",
+        description: "",
       })
       loadProjects()
     } catch (error) {
       console.error("Failed to add project:", error)
+      toast.error("Failed to create project")
     }
   }
 
   const handleEdit = (project: any) => {
     setEditingItem({
       ...project,
-      budget: project.budget || "5000000",
+      budget: project.budget !== undefined && project.budget !== null ? String(project.budget) : "5000000",
+      spent: project.spent !== undefined && project.spent !== null ? String(project.spent) : "0",
       clientName: project.clientName || "",
       managerName: project.managerName || "",
-      progress: project.progress || "0"
+      progress: project.progress !== undefined && project.progress !== null ? String(project.progress) : "0",
+      startDate: project.startDate ? project.startDate.substring(0, 10) : "",
+      endDate: project.endDate ? project.endDate.substring(0, 10) : "",
+      description: project.description || "",
     })
     setIsEditOpen(true)
   }
@@ -102,31 +186,50 @@ export default function Projects() {
     e.preventDefault()
     if (!editingItem) return
     try {
-      await updateRecord('sites', editingItem.id, {
+      await updateRecord("sites", editingItem.id, {
         name: editingItem.name,
         location: editingItem.location,
-        status: editingItem.status
+        status: editingItem.status,
+        clientName: editingItem.clientName,
+        managerName: editingItem.managerName,
+        budget: editingItem.budget,
+        spent: editingItem.spent,
+        progress: editingItem.progress,
+        startDate: editingItem.startDate || null,
+        endDate: editingItem.endDate || null,
+        description: editingItem.description,
       })
+      toast.success("Project updated successfully")
       setIsEditOpen(false)
+      if (selectedProject && selectedProject.id === editingItem.id) {
+        setSelectedProject({ ...selectedProject, ...editingItem })
+      }
       setEditingItem(null)
       loadProjects()
     } catch (error) {
       console.error("Failed to update project:", error)
+      toast.error("Failed to update project")
     }
   }
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this project?")) return
     try {
-      await deleteRecord('sites', id)
+      await deleteRecord("sites", id)
+      toast.success("Project deleted successfully")
+      if (selectedProject?.id === id) {
+        setIsDetailOpen(false)
+        setSelectedProject(null)
+      }
       loadProjects()
     } catch (error) {
       console.error("Failed to delete project:", error)
+      toast.error("Failed to delete project")
     }
   }
 
   const handleDownloadTemplate = () => {
-    downloadExcelTemplate(["name", "location", "status"], "projects_template")
+    downloadExcelTemplate(["name", "location", "status", "clientName", "managerName", "budget", "progress"], "projects_template")
   }
 
   const handleExcelImport = (file: File) => {
@@ -147,6 +250,10 @@ export default function Projects() {
           name: row.name || "",
           location: row.location || "",
           status: row.status || "active",
+          clientName: row.clientName || "",
+          managerName: row.managerName || "",
+          budget: row.budget ? String(row.budget) : "5000000",
+          progress: row.progress ? String(row.progress) : "0",
         })
       }
       toast.success("Successfully imported projects")
@@ -161,15 +268,23 @@ export default function Projects() {
       "Project Name": p.name,
       "Location": p.location || "N/A",
       "Status": p.status,
+      "Client": p.clientName || "N/A",
+      "Manager": p.managerName || "N/A",
+      "Budget ($)": p.budget || 5000000,
+      "Progress (%)": p.progress || 0,
     }))
-    exportToExcel(dataToExport, "projects")
+    exportToExcel(dataToExport, "projects_directory")
   }
 
   const handlePrint = () => {
-    const headers = ["Project Name", "Location", "Status"]
+    const headers = ["Project Name", "Location", "Client", "Manager", "Budget ($)", "Progress", "Status"]
     const rows = safeProjects.map((p) => [
       p.name,
       p.location || "N/A",
+      p.clientName || "N/A",
+      p.managerName || "N/A",
+      Number(p.budget || 5000000).toLocaleString(),
+      `${p.progress || 0}%`,
       p.status,
     ])
     printReport("Projects Directory", headers, rows)
@@ -185,33 +300,64 @@ export default function Projects() {
   const safeProjects = Array.isArray(projects) ? projects : []
 
   // Client-side search and filters
-  const filteredProjects = safeProjects.filter(project => {
-    const matchesSearch = 
+  const filteredProjects = safeProjects.filter((project) => {
+    const matchesSearch =
       project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (project.location || "").toLowerCase().includes(searchQuery.toLowerCase())
+      (project.location || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (project.clientName || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (project.managerName || "").toLowerCase().includes(searchQuery.toLowerCase())
     const matchesStatus = statusFilter === "all" || project.status === statusFilter
     return matchesSearch && matchesStatus
   })
 
-  const activeCount = safeProjects.filter(s => s.status === "active").length
-  const completedCount = safeProjects.filter(s => s.status === "completed").length
-  const holdCount = safeProjects.filter(s => s.status === "on-hold").length
+  const activeCount = safeProjects.filter((s) => s.status === "active").length
+  const completedCount = safeProjects.filter((s) => s.status === "completed").length
+  const holdCount = safeProjects.filter((s) => s.status === "on-hold").length
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      {/* Header bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl mb-2 font-bold tracking-tight">Projects Directory</h1>
-          <p className="text-sm text-muted-foreground">Manage and track construction projects and budgets</p>
+          <h1 className="text-3xl font-bold tracking-tight">Projects Directory</h1>
+          <p className="text-sm text-muted-foreground">
+            Manage construction sites, inspect project details, track budgets and milestone progress
+          </p>
         </div>
         <div className="flex gap-2 flex-wrap items-center">
-          <Button variant="outline" className="text-xs h-9" onClick={loadProjects}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <Button variant="outline" size="sm" className="text-xs h-9" onClick={loadProjects}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Button variant="outline" className="text-xs h-9" onClick={handleDownloadTemplate}>
+
+          {/* View mode toggle */}
+          <div className="flex items-center border rounded-md p-0.5 bg-muted/40">
+            <Button
+              variant={viewMode === "table" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2.5 text-xs"
+              onClick={() => setViewMode("table")}
+              title="Table View"
+            >
+              <List className="h-4 w-4 mr-1" />
+              Table
+            </Button>
+            <Button
+              variant={viewMode === "grid" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-8 px-2.5 text-xs"
+              onClick={() => setViewMode("grid")}
+              title="Grid Cards View"
+            >
+              <LayoutGrid className="h-4 w-4 mr-1" />
+              Cards
+            </Button>
+          </div>
+
+          <Button variant="outline" size="sm" className="text-xs h-9" onClick={handleDownloadTemplate}>
             Template
           </Button>
+
           <label className="cursor-pointer">
             <span className="inline-flex items-center justify-center rounded-md text-xs font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 py-2">
               Import Excel
@@ -229,61 +375,162 @@ export default function Projects() {
               }}
             />
           </label>
-          <Button variant="outline" className="text-xs h-9" onClick={handleExportExcel}>
+
+          <Button variant="outline" size="sm" className="text-xs h-9" onClick={handleExportExcel}>
             Export Excel
           </Button>
-          <Button variant="outline" className="text-xs h-9" onClick={handlePrint}>
+          <Button variant="outline" size="sm" className="text-xs h-9" onClick={handlePrint}>
             Print
           </Button>
+
+          {/* Add Project Dialog */}
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
-              <Button className="text-xs h-9">
-                <Plus className="h-4 w-4 mr-2" />
+              <Button size="sm" className="text-xs h-9 bg-blue-600 hover:bg-blue-700 text-white">
+                <Plus className="h-4 w-4 mr-1.5" />
                 Add Project
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Add New Project</DialogTitle>
-                <DialogDescription>Register a new project site on the platform</DialogDescription>
+                <DialogTitle>Add New Construction Project</DialogTitle>
+                <DialogDescription>
+                  Register a new project site with full details, budget estimations, and management team
+                </DialogDescription>
               </DialogHeader>
-              <form onSubmit={handleAdd} className="space-y-4 py-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2 col-span-2">
-                    <Label htmlFor="name">Project Name</Label>
-                    <Input id="name" placeholder="e.g. Skyline Residency" value={newProject.name} onChange={e => setNewProject({...newProject, name: e.target.value})} required />
+              <form onSubmit={handleAdd} className="space-y-4 py-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="name">Project Name *</Label>
+                    <Input
+                      id="name"
+                      placeholder="e.g. Skyline Heights Tower A & B"
+                      value={newProject.name}
+                      onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                      required
+                    />
                   </div>
-                  <div className="space-y-2 col-span-2">
-                    <Label htmlFor="location">Location / Address</Label>
-                    <Input id="location" placeholder="e.g. Seattle, WA" value={newProject.location} onChange={e => setNewProject({...newProject, location: e.target.value})} required />
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="location">Site Location / Address *</Label>
+                    <Input
+                      id="location"
+                      placeholder="e.g. Sector 62, Metro Corridor, Pune"
+                      value={newProject.location}
+                      onChange={(e) => setNewProject({ ...newProject, location: e.target.value })}
+                      required
+                    />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="client">Client / Developer Name</Label>
+                    <Input
+                      id="client"
+                      placeholder="e.g. Prestige Estates Pvt Ltd"
+                      value={newProject.clientName}
+                      onChange={(e) => setNewProject({ ...newProject, clientName: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="manager">Project Manager In-Charge</Label>
+                    <Input
+                      id="manager"
+                      placeholder="e.g. Er. Rajesh Verma"
+                      value={newProject.managerName}
+                      onChange={(e) => setNewProject({ ...newProject, managerName: e.target.value })}
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <Label htmlFor="budget">Estimated Budget ($)</Label>
-                    <Input id="budget" type="number" placeholder="5000000" value={newProject.budget} onChange={e => setNewProject({...newProject, budget: e.target.value})} />
+                    <Input
+                      id="budget"
+                      type="number"
+                      placeholder="5000000"
+                      value={newProject.budget}
+                      onChange={(e) => setNewProject({ ...newProject, budget: e.target.value })}
+                    />
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="status">Status</Label>
-                    <Select value={newProject.status} onValueChange={v => setNewProject({...newProject, status: v})}>
-                      <SelectTrigger id="status"><SelectValue /></SelectTrigger>
+                    <Label htmlFor="spent">Spent to Date ($)</Label>
+                    <Input
+                      id="spent"
+                      type="number"
+                      placeholder="0"
+                      value={newProject.spent}
+                      onChange={(e) => setNewProject({ ...newProject, spent: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="progress">Current Progress (%)</Label>
+                    <Input
+                      id="progress"
+                      type="number"
+                      min="0"
+                      max="100"
+                      placeholder="0"
+                      value={newProject.progress}
+                      onChange={(e) => setNewProject({ ...newProject, progress: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="status">Project Status</Label>
+                    <Select
+                      value={newProject.status}
+                      onValueChange={(v) => setNewProject({ ...newProject, status: v })}
+                    >
+                      <SelectTrigger id="status">
+                        <SelectValue />
+                      </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="active">Active</SelectItem>
-                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="active">Active (Under Construction)</SelectItem>
+                        <SelectItem value="completed">Completed / Handed Over</SelectItem>
                         <SelectItem value="on-hold">On Hold</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="client">Client Name</Label>
-                    <Input id="client" placeholder="Acme Corp" value={newProject.clientName} onChange={e => setNewProject({...newProject, clientName: e.target.value})} />
+                    <Label htmlFor="startDate">Start Date</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={newProject.startDate}
+                      onChange={(e) => setNewProject({ ...newProject, startDate: e.target.value })}
+                    />
                   </div>
+
                   <div className="space-y-2">
-                    <Label htmlFor="manager">Project Manager</Label>
-                    <Input id="manager" placeholder="Sarah Connor" value={newProject.managerName} onChange={e => setNewProject({...newProject, managerName: e.target.value})} />
+                    <Label htmlFor="endDate">Target Handover Date</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={newProject.endDate}
+                      onChange={(e) => setNewProject({ ...newProject, endDate: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="description">Scope / Project Description</Label>
+                    <Input
+                      id="description"
+                      placeholder="Brief summary of construction scope, total towers, slabs, etc."
+                      value={newProject.description}
+                      onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
+                    />
                   </div>
                 </div>
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-                  <Button type="submit">Create Project</Button>
+                <DialogFooter className="mt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsAddOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
+                    Create Project
+                  </Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -292,11 +539,35 @@ export default function Projects() {
       </div>
 
       {/* KPI Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Projects" value={safeProjects.length.toString()} subtitle="registered sites" icon={Briefcase} colorClass="bg-blue-100 dark:bg-blue-900/30" />
-        <KPICard title="Active" value={activeCount.toString()} subtitle="in progress" icon={MapPin} colorClass="bg-green-100 dark:bg-green-900/30" />
-        <KPICard title="Completed" value={completedCount.toString()} subtitle="closed out" icon={TrendingUp} colorClass="bg-purple-100 dark:bg-purple-900/30" />
-        <KPICard title="On Hold" value={holdCount.toString()} subtitle="waiting review" icon={DollarSign} colorClass="bg-orange-100 dark:bg-orange-900/30" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KPICard
+          title="Total Projects"
+          value={safeProjects.length.toString()}
+          subtitle="registered sites"
+          icon={Briefcase}
+          colorClass="bg-blue-100 dark:bg-blue-900/30"
+        />
+        <KPICard
+          title="Active Sites"
+          value={activeCount.toString()}
+          subtitle="under active operations"
+          icon={MapPin}
+          colorClass="bg-green-100 dark:bg-green-900/30"
+        />
+        <KPICard
+          title="Completed"
+          value={completedCount.toString()}
+          subtitle="delivered successfully"
+          icon={TrendingUp}
+          colorClass="bg-purple-100 dark:bg-purple-900/30"
+        />
+        <KPICard
+          title="On Hold"
+          value={holdCount.toString()}
+          subtitle="awaiting review or permit"
+          icon={DollarSign}
+          colorClass="bg-orange-100 dark:bg-orange-900/30"
+        />
       </div>
 
       {/* Search & Filter Controls */}
@@ -305,124 +576,906 @@ export default function Projects() {
           <div className="relative w-full md:max-w-md">
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search by project name or location..."
+              placeholder="Search by project name, location, client, or manager..."
               className="pl-9 text-xs"
               value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
+              onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <div className="flex gap-2 w-full md:w-auto">
+          <div className="flex gap-2 w-full md:w-auto items-center">
+            <span className="text-xs text-muted-foreground hidden sm:inline">Filter by:</span>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px] text-xs h-9">
-                <SelectValue placeholder="Filter by Status" />
+                <SelectValue placeholder="All Statuses" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="on-hold">On Hold</SelectItem>
+                <SelectItem value="active">Active Only</SelectItem>
+                <SelectItem value="completed">Completed Only</SelectItem>
+                <SelectItem value="on-hold">On Hold Only</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
       </Card>
 
-      {/* Projects Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Project Directory Table</CardTitle>
-          <CardDescription>Click actions to edit or delete site allocations</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Project Name</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>Client Name</TableHead>
-                  <TableHead>Budget</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      Loading projects...
-                    </TableCell>
-                  </TableRow>
-                ) : filteredProjects.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                      No projects found matching the criteria.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  filteredProjects.map((project) => {
-                    const mockBudget = Number(project.budget || 5000000).toLocaleString();
-                    const mockProgress = Number(project.progress || (project.status === 'completed' ? 100 : project.status === 'on-hold' ? 30 : 65));
-                    
-                    return (
-                      <TableRow key={project.id}>
-                        <TableCell className="text-xs font-semibold text-blue-600 dark:text-blue-400">{project.name}</TableCell>
-                        <TableCell className="text-xs">{project.location || 'N/A'}</TableCell>
-                        <TableCell className="text-xs">{project.clientName || 'Acme Construction'}</TableCell>
-                        <TableCell className="text-xs font-semibold">₹{mockBudget}</TableCell>
-                        <TableCell className="w-[180px]">
-                          <div className="flex items-center gap-2">
-                            <Progress value={mockProgress} className="h-2 w-24" />
-                            <span className="text-xs text-muted-foreground font-mono">{mockProgress}%</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={project.status === "active" ? "default" : project.status === "completed" ? "secondary" : "outline"} className="text-[10px] h-5 uppercase">
-                            {project.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => handleEdit(project)}>
-                              <Edit className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-destructive hover:text-destructive" onClick={() => handleDelete(project.id)}>
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Grid Cards View */}
+      {viewMode === "grid" ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {loading ? (
+            <div className="col-span-full py-12 text-center text-muted-foreground">
+              Loading projects...
+            </div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="col-span-full py-12 text-center text-muted-foreground">
+              No projects found matching the criteria.
+            </div>
+          ) : (
+            filteredProjects.map((project) => {
+              const budgetVal = Number(project.budget || 5000000)
+              const spentVal = Number(project.spent || 0)
+              const progressVal = Number(
+                project.progress !== undefined && project.progress !== null
+                  ? project.progress
+                  : project.status === "completed"
+                  ? 100
+                  : project.status === "on-hold"
+                  ? 30
+                  : 65
+              )
+              const isCurrentActive = selectedSiteId === project.id
 
-      {/* Edit Modal */}
+              return (
+                <Card
+                  key={project.id}
+                  className="hover:shadow-md transition-shadow cursor-pointer border flex flex-col justify-between"
+                  onClick={() => handleViewDetails(project)}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <CardTitle className="text-base font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 hover:underline">
+                          {project.name}
+                          <ArrowUpRight className="h-4 w-4 opacity-70" />
+                        </CardTitle>
+                        <CardDescription className="flex items-center gap-1 text-xs mt-1">
+                          <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                          <span className="truncate">{project.location || "Location not set"}</span>
+                        </CardDescription>
+                      </div>
+                      <Badge
+                        variant={
+                          project.status === "active"
+                            ? "default"
+                            : project.status === "completed"
+                            ? "secondary"
+                            : "outline"
+                        }
+                        className="text-[10px] uppercase font-semibold h-5"
+                      >
+                        {project.status}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+
+                  <CardContent className="space-y-4 pb-4">
+                    <div className="grid grid-cols-2 gap-2 text-xs bg-muted/30 p-2.5 rounded-lg border">
+                      <div>
+                        <span className="text-muted-foreground block text-[10px] uppercase">Client</span>
+                        <span className="font-medium truncate block">
+                          {project.clientName || "Direct Owner"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground block text-[10px] uppercase">Manager</span>
+                        <span className="font-medium truncate block">
+                          {project.managerName || "Site Lead"}
+                        </span>
+                      </div>
+                      <div className="mt-1">
+                        <span className="text-muted-foreground block text-[10px] uppercase">Budget</span>
+                        <span className="font-semibold block font-mono text-emerald-600 dark:text-emerald-400">
+                          ${budgetVal.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="mt-1">
+                        <span className="text-muted-foreground block text-[10px] uppercase">Spent</span>
+                        <span className="font-semibold block font-mono">
+                          ${spentVal.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">Completion Progress</span>
+                        <span className="font-bold font-mono">{progressVal}%</span>
+                      </div>
+                      <Progress value={progressVal} className="h-2" />
+                    </div>
+
+                    {project._count && (
+                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-1 border-t">
+                        <span className="flex items-center gap-1" title="Production Batches">
+                          <Factory className="h-3 w-3 text-blue-500" />
+                          {project._count.productions || 0} Pours
+                        </span>
+                        <span className="flex items-center gap-1" title="Raw Materials Inward">
+                          <Package className="h-3 w-3 text-amber-500" />
+                          {project._count.materialInwards || 0} Inward
+                        </span>
+                        <span className="flex items-center gap-1" title="Assigned Fleet">
+                          <Truck className="h-3 w-3 text-emerald-500" />
+                          {project._count.vehicles || 0} Vehicles
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+
+                  <div className="p-3 border-t bg-muted/10 flex items-center justify-between gap-2">
+                    <Button
+                      variant={isCurrentActive ? "secondary" : "outline"}
+                      size="sm"
+                      className="text-xs h-7 px-2.5"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleSetActiveSite(project)
+                      }}
+                    >
+                      {isCurrentActive ? (
+                        <>
+                          <Check className="h-3 w-3 mr-1 text-green-600" /> Active Workspace
+                        </>
+                      ) : (
+                        <>
+                          <Filter className="h-3 w-3 mr-1" /> Set Active
+                        </>
+                      )}
+                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-blue-600"
+                        title="View Project Details"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleViewDetails(project)
+                        }}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        title="Edit Project"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleEdit(project)
+                        }}
+                      >
+                        <Edit className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                        title="Delete Project"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleDelete(project.id)
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                </Card>
+              )
+            })
+          )}
+        </div>
+      ) : (
+        /* Table View */
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Project Directory Table</CardTitle>
+                <CardDescription>
+                  Click on any project row or click the <Eye className="inline h-3 w-3 mx-0.5 text-blue-600" /> icon to view complete details, financials, and operational telemetry
+                </CardDescription>
+              </div>
+              <Badge variant="outline" className="text-xs">
+                {filteredProjects.length} Projects Listed
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Project Name</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Client Name</TableHead>
+                    <TableHead>Project Manager</TableHead>
+                    <TableHead>Budget</TableHead>
+                    <TableHead>Progress</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        Loading projects...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredProjects.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        No projects found matching the criteria.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredProjects.map((project) => {
+                      const budgetVal = Number(project.budget || 5000000)
+                      const progressVal = Number(
+                        project.progress !== undefined && project.progress !== null
+                          ? project.progress
+                          : project.status === "completed"
+                          ? 100
+                          : project.status === "on-hold"
+                          ? 30
+                          : 65
+                      )
+                      const isCurrentActive = selectedSiteId === project.id
+
+                      return (
+                        <TableRow
+                          key={project.id}
+                          className="cursor-pointer hover:bg-muted/60 transition-colors"
+                          onClick={() => handleViewDetails(project)}
+                        >
+                          <TableCell className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                            <div className="flex items-center gap-1.5">
+                              <span className="hover:underline">{project.name}</span>
+                              {isCurrentActive && (
+                                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-normal">
+                                  Active Site
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs">{project.location || "N/A"}</TableCell>
+                          <TableCell className="text-xs">{project.clientName || "Direct Owner"}</TableCell>
+                          <TableCell className="text-xs">{project.managerName || "Site Lead"}</TableCell>
+                          <TableCell className="text-xs font-semibold font-mono text-emerald-600 dark:text-emerald-400">
+                            ${budgetVal.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="w-[180px]">
+                            <div className="flex items-center gap-2">
+                              <Progress value={progressVal} className="h-2 w-24" />
+                              <span className="text-xs text-muted-foreground font-mono">
+                                {progressVal}%
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                project.status === "active"
+                                  ? "default"
+                                  : project.status === "completed"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                              className="text-[10px] h-5 uppercase font-medium"
+                            >
+                              {project.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950/50"
+                                title="View Complete Project Details"
+                                onClick={() => handleViewDetails(project)}
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0"
+                                title="Edit Project"
+                                onClick={() => handleEdit(project)}
+                              >
+                                <Edit className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                                title="Delete Project"
+                                onClick={() => handleDelete(project.id)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* ================================================================= */}
+      {/* ============ PROJECT DETAILS MODAL / DRAWER (POPUP) ============== */}
+      {/* ================================================================= */}
+      <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+          {selectedProject && (
+            <div>
+              {/* Top Banner Header */}
+              <div className="p-6 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white rounded-t-lg">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3">
+                    <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center border border-white/20 flex-shrink-0">
+                      <Building2 className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h2 className="text-xl font-bold tracking-tight text-white">
+                          {selectedProject.name}
+                        </h2>
+                        <Badge className="bg-white/20 hover:bg-white/30 text-white uppercase text-[10px] font-bold border-0">
+                          {selectedProject.status}
+                        </Badge>
+                        {selectedSiteId === selectedProject.id && (
+                          <Badge className="bg-emerald-500 text-white text-[10px] font-bold border-0">
+                            Active ERP Filter
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-blue-200 mt-1 flex items-center gap-1">
+                        <MapPin className="h-3.5 w-3.5 text-blue-300" />
+                        {selectedProject.location || "No site location specified"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Header Actions */}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="text-xs h-8 bg-white/20 hover:bg-white/30 text-white border-0"
+                      onClick={() => handleSetActiveSite(selectedProject)}
+                    >
+                      <Filter className="h-3.5 w-3.5 mr-1" />
+                      Set Active ERP Site
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="text-xs h-8 bg-white text-blue-900 hover:bg-white/90"
+                      onClick={() => handleEdit(selectedProject)}
+                    >
+                      <Edit className="h-3.5 w-3.5 mr-1" />
+                      Edit Details
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick KPI Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-6 bg-muted/30 border-b">
+                <div className="p-3 rounded-lg bg-card border shadow-xs">
+                  <span className="text-[11px] text-muted-foreground uppercase block font-medium">
+                    Total Budget
+                  </span>
+                  <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
+                    ${Number(selectedProject.budget || 5000000).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-3 rounded-lg bg-card border shadow-xs">
+                  <span className="text-[11px] text-muted-foreground uppercase block font-medium">
+                    Spent to Date
+                  </span>
+                  <span className="text-lg font-bold font-mono">
+                    ${Number(selectedProject.spent || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div className="p-3 rounded-lg bg-card border shadow-xs">
+                  <span className="text-[11px] text-muted-foreground uppercase block font-medium">
+                    Milestone Progress
+                  </span>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Progress
+                      value={Number(selectedProject.progress || 0)}
+                      className="h-2 flex-1"
+                    />
+                    <span className="text-xs font-bold font-mono">
+                      {selectedProject.progress || 0}%
+                    </span>
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-card border shadow-xs">
+                  <span className="text-[11px] text-muted-foreground uppercase block font-medium">
+                    Operations Logged
+                  </span>
+                  <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
+                    {selectedProject._count
+                      ? (selectedProject._count.productions || 0) +
+                        (selectedProject._count.materialInwards || 0) +
+                        (selectedProject._count.vehicles || 0)
+                      : "Telemetry ready"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Tabs Section */}
+              <div className="p-6">
+                <Tabs defaultValue="overview" className="w-full">
+                  <TabsList className="grid grid-cols-3 mb-6">
+                    <TabsTrigger value="overview">Project Overview</TabsTrigger>
+                    <TabsTrigger value="operations">Site Operations & Fleet</TabsTrigger>
+                    <TabsTrigger value="actions">Linked ERP Navigation</TabsTrigger>
+                  </TabsList>
+
+                  {/* Tab 1: Project Overview */}
+                  <TabsContent value="overview" className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Project Metadata Details */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                            <Briefcase className="h-4 w-4 text-blue-600" />
+                            General Information
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3 text-xs">
+                          <div className="flex justify-between py-1.5 border-b">
+                            <span className="text-muted-foreground">Project Name</span>
+                            <span className="font-semibold">{selectedProject.name}</span>
+                          </div>
+                          <div className="flex justify-between py-1.5 border-b">
+                            <span className="text-muted-foreground">Site Location</span>
+                            <span className="font-medium text-right max-w-[200px] truncate">
+                              {selectedProject.location || "N/A"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between py-1.5 border-b">
+                            <span className="text-muted-foreground">Client / Developer</span>
+                            <span className="font-semibold text-blue-600 dark:text-blue-400">
+                              {selectedProject.clientName || "Direct Owner / Self"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between py-1.5 border-b">
+                            <span className="text-muted-foreground">Project Manager</span>
+                            <span className="font-medium">
+                              {selectedProject.managerName || "Site In-Charge Engineer"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between py-1.5 border-b">
+                            <span className="text-muted-foreground">Operational Status</span>
+                            <Badge variant="outline" className="text-[10px] uppercase font-bold">
+                              {selectedProject.status}
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between py-1.5">
+                            <span className="text-muted-foreground">Unique Site ID</span>
+                            <span className="font-mono text-[11px] text-muted-foreground">
+                              {selectedProject.id}
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Timeline & Budget Breakdown */}
+                      <Card>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                            <DollarSign className="h-4 w-4 text-emerald-600" />
+                            Schedule & Financial Standing
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3 text-xs">
+                          <div className="flex justify-between py-1.5 border-b">
+                            <span className="text-muted-foreground">Project Start Date</span>
+                            <span className="font-mono">
+                              {selectedProject.startDate
+                                ? new Date(selectedProject.startDate).toLocaleDateString()
+                                : "Scheduled / Ongoing"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between py-1.5 border-b">
+                            <span className="text-muted-foreground">Target Handover Date</span>
+                            <span className="font-mono">
+                              {selectedProject.endDate
+                                ? new Date(selectedProject.endDate).toLocaleDateString()
+                                : "Phase Wise Completion"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between py-1.5 border-b">
+                            <span className="text-muted-foreground">Remaining Budget</span>
+                            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                              $
+                              {(
+                                Number(selectedProject.budget || 5000000) -
+                                Number(selectedProject.spent || 0)
+                              ).toLocaleString()}
+                            </span>
+                          </div>
+                          <div className="flex justify-between py-1.5 border-b">
+                            <span className="text-muted-foreground">Budget Burn Rate</span>
+                            <span className="font-mono font-medium">
+                              {Number(selectedProject.budget || 0) > 0
+                                ? (
+                                    (Number(selectedProject.spent || 0) /
+                                      Number(selectedProject.budget || 5000000)) *
+                                    100
+                                  ).toFixed(1) + "%"
+                                : "0%"}
+                            </span>
+                          </div>
+                          <div className="pt-2">
+                            <span className="text-muted-foreground block text-[11px] mb-1">
+                              Project Scope & Objectives:
+                            </span>
+                            <p className="p-2.5 rounded bg-muted/40 text-muted-foreground text-[11px] italic">
+                              {selectedProject.description ||
+                                "Full turn-key construction project covering civil structural works, RCC framing, and finishing."}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </TabsContent>
+
+                  {/* Tab 2: Operations & Telemetry */}
+                  <TabsContent value="operations" className="space-y-4">
+                    {projectDetailsLoading ? (
+                      <div className="py-8 text-center text-xs text-muted-foreground">
+                        <RefreshCw className="h-4 w-4 animate-spin mx-auto mb-2 text-blue-600" />
+                        Fetching site operations data...
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {/* Concrete Production Summary */}
+                        <Card>
+                          <CardHeader className="py-3 px-4">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-xs font-semibold flex items-center gap-2">
+                                <Factory className="h-4 w-4 text-blue-600" />
+                                Recent Concrete & RMC Production Pours
+                              </CardTitle>
+                              <Badge variant="outline" className="text-[10px]">
+                                {selectedProject.productions?.length || 0} Batches Logged
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-0">
+                            {selectedProject.productions && selectedProject.productions.length > 0 ? (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="text-xs">Date</TableHead>
+                                    <TableHead className="text-xs">Grade</TableHead>
+                                    <TableHead className="text-xs">Volume (cum)</TableHead>
+                                    <TableHead className="text-xs">Structure / Tower</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {selectedProject.productions.map((prod: any) => (
+                                    <TableRow key={prod.id}>
+                                      <TableCell className="text-xs font-mono">
+                                        {new Date(prod.date || prod.createdAt).toLocaleDateString()}
+                                      </TableCell>
+                                      <TableCell className="text-xs font-semibold text-blue-600">
+                                        {prod.grade || "Standard Mix"}
+                                      </TableCell>
+                                      <TableCell className="text-xs font-mono font-bold">
+                                        {prod.amount} {prod.unit || "cum"}
+                                      </TableCell>
+                                      <TableCell className="text-xs text-muted-foreground">
+                                        {prod.towerName || prod.notes || "General Pour"}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            ) : (
+                              <div className="p-4 text-center text-xs text-muted-foreground">
+                                No direct concrete batch records linked to this site yet.
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+
+                        {/* Raw Material Inward */}
+                        <Card>
+                          <CardHeader className="py-3 px-4">
+                            <div className="flex items-center justify-between">
+                              <CardTitle className="text-xs font-semibold flex items-center gap-2">
+                                <Package className="h-4 w-4 text-amber-600" />
+                                Material Inward & Delivery Log
+                              </CardTitle>
+                              <Badge variant="outline" className="text-[10px]">
+                                {selectedProject.materialInwards?.length || 0} Inward Shipments
+                              </Badge>
+                            </div>
+                          </CardHeader>
+                          <CardContent className="p-0">
+                            {selectedProject.materialInwards &&
+                            selectedProject.materialInwards.length > 0 ? (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="text-xs">Date</TableHead>
+                                    <TableHead className="text-xs">Material</TableHead>
+                                    <TableHead className="text-xs">Quantity</TableHead>
+                                    <TableHead className="text-xs">Challan / Ref</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {selectedProject.materialInwards.map((inw: any) => (
+                                    <TableRow key={inw.id}>
+                                      <TableCell className="text-xs font-mono">
+                                        {new Date(inw.date || inw.createdAt).toLocaleDateString()}
+                                      </TableCell>
+                                      <TableCell className="text-xs font-semibold">
+                                        {inw.materialType || inw.itemName || "Raw Material"}
+                                      </TableCell>
+                                      <TableCell className="text-xs font-mono font-bold">
+                                        {inw.netWeight || inw.quantity} {inw.unit || "Tons"}
+                                      </TableCell>
+                                      <TableCell className="text-xs text-muted-foreground font-mono">
+                                        {inw.challanNo || inw.vehicleNo || "N/A"}
+                                      </TableCell>
+                                    </TableRow>
+                                  ))}
+                                </TableBody>
+                              </Table>
+                            ) : (
+                              <div className="p-4 text-center text-xs text-muted-foreground">
+                                No inward material dispatches registered specifically for this site.
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* Tab 3: Linked ERP Navigation */}
+                  <TabsContent value="actions" className="space-y-4">
+                    <p className="text-xs text-muted-foreground">
+                      Jump directly to related operational modules pre-filtered for{" "}
+                      <strong>{selectedProject.name}</strong>:
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <Button
+                        variant="outline"
+                        className="h-16 justify-start gap-3 p-4"
+                        onClick={() => {
+                          handleSetActiveSite(selectedProject)
+                          setIsDetailOpen(false)
+                          onNavigate?.("production")
+                        }}
+                      >
+                        <Factory className="h-6 w-6 text-blue-600" />
+                        <div className="text-left">
+                          <div className="text-xs font-bold">View Site Production</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            Batching records & RMC grades
+                          </div>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        className="h-16 justify-start gap-3 p-4"
+                        onClick={() => {
+                          handleSetActiveSite(selectedProject)
+                          setIsDetailOpen(false)
+                          onNavigate?.("material-inward")
+                        }}
+                      >
+                        <Package className="h-6 w-6 text-amber-600" />
+                        <div className="text-left">
+                          <div className="text-xs font-bold">Material Inward Gate</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            Cement, aggregate, steel weighbridge
+                          </div>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        className="h-16 justify-start gap-3 p-4"
+                        onClick={() => {
+                          handleSetActiveSite(selectedProject)
+                          setIsDetailOpen(false)
+                          onNavigate?.("equipment")
+                        }}
+                      >
+                        <Truck className="h-6 w-6 text-emerald-600" />
+                        <div className="text-left">
+                          <div className="text-xs font-bold">Assigned Equipment & Fleet</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            Transit mixers, pumps & cranes
+                          </div>
+                        </div>
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        className="h-16 justify-start gap-3 p-4"
+                        onClick={() => {
+                          handleSetActiveSite(selectedProject)
+                          setIsDetailOpen(false)
+                          onNavigate?.("challan")
+                        }}
+                      >
+                        <Activity className="h-6 w-6 text-purple-600" />
+                        <div className="text-left">
+                          <div className="text-xs font-bold">Delivery Challans</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            Generate & print site dispatch slips
+                          </div>
+                        </div>
+                      </Button>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+              </div>
+
+              {/* Bottom Footer Actions */}
+              <div className="p-4 bg-muted/20 border-t flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setIsDetailOpen(false)}
+                >
+                  Close Window
+                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      const dataToExport = [
+                        {
+                          "Project Name": selectedProject.name,
+                          "Location": selectedProject.location,
+                          "Status": selectedProject.status,
+                          "Client": selectedProject.clientName,
+                          "Manager": selectedProject.managerName,
+                          "Budget": selectedProject.budget,
+                          "Spent": selectedProject.spent,
+                          "Progress": `${selectedProject.progress}%`,
+                        },
+                      ]
+                      exportToExcel(dataToExport, `${selectedProject.name}_summary`)
+                    }}
+                  >
+                    Export Project Sheet
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                    onClick={() => handleEdit(selectedProject)}
+                  >
+                    <Edit className="h-3.5 w-3.5 mr-1" />
+                    Modify Project
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ================================================================= */}
+      {/* ======================= EDIT PROJECT MODAL ======================= */}
+      {/* ================================================================= */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Edit Project details</DialogTitle>
+            <DialogTitle>Edit Project Details</DialogTitle>
+            <DialogDescription>
+              Update site specifications, budget allocations, and milestone achievements
+            </DialogDescription>
           </DialogHeader>
           {editingItem && (
-            <form onSubmit={handleUpdate} className="space-y-4 py-4">
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-name">Project Name</Label>
-                  <Input id="edit-name" value={editingItem.name} onChange={e => setEditingItem({...editingItem, name: e.target.value})} required />
+            <form onSubmit={handleUpdate} className="space-y-4 py-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="edit-name">Project Name *</Label>
+                  <Input
+                    id="edit-name"
+                    value={editingItem.name}
+                    onChange={(e) => setEditingItem({ ...editingItem, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="edit-location">Location / Address *</Label>
+                  <Input
+                    id="edit-location"
+                    value={editingItem.location}
+                    onChange={(e) => setEditingItem({ ...editingItem, location: e.target.value })}
+                    required
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="edit-location">Location</Label>
-                  <Input id="edit-location" value={editingItem.location} onChange={e => setEditingItem({...editingItem, location: e.target.value})} required />
+                  <Label htmlFor="edit-client">Client / Developer Name</Label>
+                  <Input
+                    id="edit-client"
+                    value={editingItem.clientName}
+                    onChange={(e) => setEditingItem({ ...editingItem, clientName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-manager">Project Manager</Label>
+                  <Input
+                    id="edit-manager"
+                    value={editingItem.managerName}
+                    onChange={(e) => setEditingItem({ ...editingItem, managerName: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-budget">Estimated Budget ($)</Label>
+                  <Input
+                    id="edit-budget"
+                    type="number"
+                    value={editingItem.budget}
+                    onChange={(e) => setEditingItem({ ...editingItem, budget: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-spent">Spent to Date ($)</Label>
+                  <Input
+                    id="edit-spent"
+                    type="number"
+                    value={editingItem.spent}
+                    onChange={(e) => setEditingItem({ ...editingItem, spent: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-progress">Progress (%)</Label>
+                  <Input
+                    id="edit-progress"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={editingItem.progress}
+                    onChange={(e) => setEditingItem({ ...editingItem, progress: e.target.value })}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="edit-status">Status</Label>
-                  <Select value={editingItem.status} onValueChange={v => setEditingItem({...editingItem, status: v})}>
-                    <SelectTrigger id="edit-status"><SelectValue /></SelectTrigger>
+                  <Select
+                    value={editingItem.status}
+                    onValueChange={(v) => setEditingItem({ ...editingItem, status: v })}
+                  >
+                    <SelectTrigger id="edit-status">
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
@@ -430,21 +1483,52 @@ export default function Projects() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-startDate">Start Date</Label>
+                  <Input
+                    id="edit-startDate"
+                    type="date"
+                    value={editingItem.startDate}
+                    onChange={(e) => setEditingItem({ ...editingItem, startDate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-endDate">Target Handover Date</Label>
+                  <Input
+                    id="edit-endDate"
+                    type="date"
+                    value={editingItem.endDate}
+                    onChange={(e) => setEditingItem({ ...editingItem, endDate: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="edit-description">Scope / Description</Label>
+                  <Input
+                    id="edit-description"
+                    value={editingItem.description}
+                    onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                  />
+                </div>
               </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
-                <Button type="submit">Update Project</Button>
+              <DialogFooter className="mt-4">
+                <Button type="button" variant="outline" onClick={() => setIsEditOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Save Changes
+                </Button>
               </DialogFooter>
             </form>
           )}
         </DialogContent>
       </Dialog>
 
+      {/* SheetJS Import Preview Modal */}
       <ImportPreviewModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         data={importData}
-        headers={["name", "location", "status"]}
+        headers={["name", "location", "status", "clientName", "managerName", "budget", "progress"]}
         validationRules={validateRecord}
         onConfirm={handleConfirmImport}
         title="Import Projects Preview"
