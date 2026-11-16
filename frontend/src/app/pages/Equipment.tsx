@@ -685,7 +685,7 @@ export default function Equipment() {
                         <TableCell className="text-xs">{v.vehicleType || "Unassigned"}</TableCell>
                         <TableCell className="text-xs font-medium">{v.driver || "No Operator Assigned"}</TableCell>
                         <TableCell className="text-xs">{v.site?.name || "Yard / Idle"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{lastServiced}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{v.lastService ? new Date(v.lastService).toLocaleDateString('en-GB') : 'N/A'}</TableCell>
                         <TableCell className="text-xs text-right font-mono font-medium">
                           {effectiveRental > 0 ? (
                             <span className="text-purple-700 dark:text-purple-400 font-semibold">
