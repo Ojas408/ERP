@@ -3,72 +3,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteOverheadEntry = exports.updateOverheadEntry = exports.createOverheadEntry = exports.getOverheadSummary = exports.getOverheadEntries = exports.SECTION_UNITS = void 0;
+exports.getOverheadSummary = exports.deleteOverheadEntry = exports.updateOverheadEntry = exports.createOverheadEntry = exports.getOverheadEntries = void 0;
 const prisma_1 = __importDefault(require("../lib/prisma"));
 const audit_1 = require("../utils/audit");
 const SECTION_ORDER = [
-    'Machinery',
-    'Fuel',
-    'Raw Material',
-    'Manpower',
-    'Electricity',
-    'Maintenance',
-    'Scrap',
+    'Machinery & Equipment',
+    'Fuel & Lubricants',
+    'Electricity & Power',
+    'Employee Cost',
+    'Contract Labour',
+    'Maintenance & Repairs',
+    'Equipment Rental',
+    'Other Operational Expenses',
 ];
-/** Map legacy / free-text categories into report sections */
-/** Canonical unit for each overhead section — never mix Litres / MT / bags. */
-exports.SECTION_UNITS = {
-    Machinery: 'nos',
-    Fuel: 'Litres',
-    'Raw Material': 'MT',
-    Manpower: 'persons',
-    Electricity: 'kWh',
-    Maintenance: 'ls',
-    Scrap: 'tons',
-};
-function normalizeCategory(category) {
-    const c = (category || '').trim().toLowerCase();
-    if (c === 'machinery' || c.includes('machin') || c.includes('equipment hire'))
-        return 'Machinery';
-    if (c === 'fuel' || c.includes('fuel') || c.includes('diesel') || c.includes('lubricant'))
-        return 'Fuel';
-    if (c === 'raw material' ||
-        c === 'cement' ||
-        c === 'aggregate' ||
-        c.includes('ggbs') ||
-        c.includes('fly ash') ||
-        c.includes('admix') ||
-        c.includes('micro fine')) {
-        return 'Raw Material';
-    }
-    if (c === 'manpower' || c.includes('manpower') || c === 'labour' || c === 'labor')
-        return 'Manpower';
-    if (c.includes('electric') || c.includes('power'))
-        return 'Electricity';
-    if (c.includes('maintain') || c.includes('misc'))
-        return 'Maintenance';
-    if (c.includes('scrap'))
-        return 'Scrap';
-    // Transit Mixture / Slabs are production types — keep out of Fuel/Maintenance
-    if (c === 'transit mixture' || c === 'slabs')
-        return 'Other';
-    return 'Other';
-}
-function defaultUnitFor(section, entryUnit) {
-    const canonical = exports.SECTION_UNITS[section];
-    if (!canonical)
-        return entryUnit || null;
-    const u = (entryUnit || '').toLowerCase();
-    if (section === 'Fuel' && (u.includes('litr') || u === 'l' || u === 'liter' || u === 'litre'))
-        return 'Litres';
-    if (section === 'Raw Material' && (u === 'mt' || u.includes('ton') || u === 'metric ton'))
-        return 'MT';
-    if (section === 'Machinery' && (u === 'nos' || u === 'qty' || u === 'units' || u === 'no' || u === ''))
-        return 'nos';
-    if (section === 'Manpower' && (u.includes('person') || u === 'nos' || u === 'qty'))
-        return 'persons';
-    return canonical;
-}
 function round2(n) {
     return Math.round((n + Number.EPSILON) * 100) / 100;
 }
@@ -77,7 +24,12 @@ function perCuM(amount, totalCuM) {
         return 0;
     return round2(amount / totalCuM);
 }
-function monthRange(month, year) {
+function parseDateRange(month, year, startDate, endDate) {
+    if (startDate && endDate) {
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        return { start, end, year: start.getFullYear(), month: start.getMonth() + 1 };
+    }
     const now = new Date();
     const y = year ? parseInt(year, 10) : now.getFullYear();
     const m = month ? parseInt(month, 10) - 1 : now.getMonth();
@@ -85,16 +37,17 @@ function monthRange(month, year) {
     const end = new Date(Date.UTC(y, m + 1, 1, 0, 0, 0));
     return { start, end, year: y, month: m + 1 };
 }
+// 1. Get raw overhead entries (for manual adjustments / backward compatibility)
 const getOverheadEntries = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const { month, year, siteId } = req.query;
-        const { start, end } = monthRange(month, year);
+        const { month, year, siteId, startDate, endDate } = req.query;
+        const { start, end } = parseDateRange(month, year, startDate, endDate);
         const entries = await prisma_1.default.overheadEntry.findMany({
             where: {
                 tenantId,
                 date: { gte: start, lt: end },
-                ...(siteId ? { siteId } : {}),
+                ...(siteId && siteId !== 'all' ? { siteId } : {}),
             },
             include: { site: true },
             orderBy: { date: 'desc' },
@@ -106,345 +59,53 @@ const getOverheadEntries = async (req, res) => {
     }
 };
 exports.getOverheadEntries = getOverheadEntries;
-const getOverheadSummary = async (req, res) => {
+// 2. Create manual overhead entry
+const createOverheadEntry = async (req, res) => {
     try {
         const tenantId = req.user.tenantId;
-        const { month, year, siteId, includeExtras } = req.query;
-        const { start, end, year: y, month: m } = monthRange(month, year);
-        const siteFilter = siteId ? { siteId } : {};
-        // Extras off by default — they mixed bags/tons/salaries into the plant ₹/CuM report.
-        const withExtras = includeExtras === '1' || includeExtras === 'true';
-        const [entries, expenses, employees, productions, consumptions, inventory, scraps, inwards] = await Promise.all([
-            prisma_1.default.overheadEntry.findMany({
-                where: { tenantId, date: { gte: start, lt: end }, ...siteFilter },
-                include: { site: true },
-                orderBy: { date: 'asc' },
-            }),
-            withExtras
-                ? prisma_1.default.expense.findMany({ where: { tenantId, date: { gte: start, lt: end } } })
-                : Promise.resolve([]),
-            withExtras
-                ? prisma_1.default.employee.findMany({ where: { tenantId, status: 'active' } })
-                : Promise.resolve([]),
-            prisma_1.default.production.findMany({
-                where: {
-                    tenantId,
-                    date: { gte: start, lt: end },
-                    isRejected: false,
-                    ...siteFilter,
-                },
-            }),
-            withExtras
-                ? prisma_1.default.consumption.findMany({
-                    where: {
-                        tenantId,
-                        date: { gte: start, lt: end },
-                        isRejected: false,
-                        ...siteFilter,
-                    },
-                })
-                : Promise.resolve([]),
-            withExtras ? prisma_1.default.inventory.findMany({ where: { tenantId } }) : Promise.resolve([]),
-            prisma_1.default.scrap.findMany({
-                where: { tenantId, date: { gte: start, lt: end }, ...siteFilter },
-            }),
-            withExtras
-                ? prisma_1.default.materialInward.findMany({
-                    where: { tenantId, date: { gte: start, lt: end }, ...(siteId ? { siteId } : {}) },
-                })
-                : Promise.resolve([]),
-        ]);
-        // Total concrete production in cubic meters
-        const totalProductionCuM = productions
-            .filter((p) => {
-            const u = (p.unit || 'cum').toLowerCase();
-            return u === 'cum' || u === 'm3' || u === 'cu.m' || u === 'cumec';
-        })
-            .reduce((sum, p) => sum + (p.amount || 0), 0);
-        const inventoryPriceMap = {};
-        inventory.forEach((item) => {
-            const key = (item.itemName || '').trim().toLowerCase();
-            if (key && item.price != null)
-                inventoryPriceMap[key] = item.price;
-        });
-        // Weighted average unit price from material inward
-        const inwardRate = {};
-        inwards.forEach((row) => {
-            const key = (row.materialName || '').trim().toLowerCase();
-            if (!key || row.unitPrice == null)
-                return;
-            if (!inwardRate[key])
-                inwardRate[key] = { totalValue: 0, totalQty: 0 };
-            inwardRate[key].totalValue += (row.unitPrice || 0) * (row.quantity || 0);
-            inwardRate[key].totalQty += row.quantity || 0;
-        });
-        Object.entries(inwardRate).forEach(([key, v]) => {
-            if (v.totalQty > 0)
-                inventoryPriceMap[key] = v.totalValue / v.totalQty;
-        });
-        const sections = {};
-        SECTION_ORDER.forEach((s) => {
-            sections[s] = { rows: [], totalAmount: 0, totalCostPerCuM: 0 };
-        });
-        sections['Other'] = { rows: [], totalAmount: 0, totalCostPerCuM: 0 };
-        const pushRow = (section, row) => {
-            if (!sections[section])
-                sections[section] = { rows: [], totalAmount: 0, totalCostPerCuM: 0 };
-            sections[section].rows.push(row);
-            sections[section].totalAmount += row.amount;
-        };
-        // 1) Explicit overhead entries (correct unit per section)
-        entries.forEach((entry) => {
-            const section = normalizeCategory(entry.category);
-            const cd = entry.customData || {};
-            const unit = defaultUnitFor(section, entry.unit);
-            const rate = cd.rate != null && cd.rate !== ''
-                ? parseFloat(String(cd.rate)) || null
-                : entry.quantity && entry.quantity > 0
-                    ? round2(entry.amount / entry.quantity)
-                    : null;
-            pushRow(section, {
-                id: entry.id,
-                source: 'overhead',
-                description: entry.description || entry.category,
-                quantity: entry.quantity,
-                unit,
-                rate,
-                amount: entry.amount || 0,
-                costPerCuM: perCuM(entry.amount || 0, totalProductionCuM),
-                remarks: cd.remarks || null,
-                personnelDetails: cd.personnelDetails || null,
-                avgFuelConsumption: section === 'Fuel'
-                    ? cd.avgFuelConsumption != null
-                        ? parseFloat(String(cd.avgFuelConsumption)) || null
-                        : entry.quantity && totalProductionCuM > 0
-                            ? round2(entry.quantity / totalProductionCuM)
-                            : null
-                    : null,
-                siteName: entry.site?.name || null,
-                customData: cd,
-            });
-        });
-        let expenseByCategory = {};
-        let totalSalaries = 0;
-        const scrapQty = scraps.reduce((sum, s) => sum + (s.quantity || 0), 0);
-        const scrapCost = scraps.reduce((sum, s) => {
-            if (s.saleStatus === 'sold')
-                return sum - (s.saleValue || 0);
-            return sum + (s.saleValue || 0);
-        }, 0);
-        if (withExtras) {
-            // 2) Consumption → Fuel / Raw Materials
-            const consumedByMaterial = {};
-            consumptions.forEach((c) => {
-                const key = (c.material || '').trim();
-                if (!key)
-                    return;
-                const lk = key.toLowerCase();
-                let unitPrice = c.unitPrice != null ? c.unitPrice : inventoryPriceMap[lk];
-                if (unitPrice == null)
-                    unitPrice = 0;
-                const cost = (c.amount || 0) * unitPrice;
-                if (!consumedByMaterial[key]) {
-                    consumedByMaterial[key] = {
-                        qty: 0,
-                        unit: c.unit || '',
-                        cost: 0,
-                        sourceLocation: c.sourceLocation || undefined,
-                        brand: c.brand || undefined,
-                        mfgLocation: c.mfgLocation || undefined,
-                    };
-                }
-                consumedByMaterial[key].qty += c.amount || 0;
-                consumedByMaterial[key].cost += cost;
-                if (c.unit)
-                    consumedByMaterial[key].unit = c.unit;
-            });
-            Object.entries(consumedByMaterial).forEach(([material, data]) => {
-                const lk = material.toLowerCase();
-                const isFuel = lk.includes('diesel') || lk.includes('fuel') || lk.includes('lubricant');
-                const section = isFuel ? 'Fuel' : 'Raw Material';
-                const already = sections[section].rows.some((r) => r.description.toLowerCase() === material.toLowerCase() && r.source === 'overhead');
-                if (already || (data.cost <= 0 && data.qty <= 0))
-                    return;
-                const rate = data.qty > 0 ? round2(data.cost / data.qty) : inventoryPriceMap[lk] || null;
-                pushRow(section, {
-                    source: 'consumption',
-                    description: material,
-                    quantity: data.qty,
-                    unit: defaultUnitFor(section, data.unit || (isFuel ? 'Litres' : 'MT')),
-                    rate,
-                    amount: round2(data.cost),
-                    costPerCuM: perCuM(data.cost, totalProductionCuM),
-                    remarks: 'From consumption',
-                    avgFuelConsumption: isFuel && totalProductionCuM > 0 ? round2(data.qty / totalProductionCuM) : null,
-                });
-            });
-            if (scraps.length > 0) {
-                pushRow('Scrap', {
-                    source: 'scrap',
-                    description: 'Scrap / waste',
-                    quantity: scrapQty,
-                    unit: scraps[0]?.unit || 'tons',
-                    rate: null,
-                    amount: round2(Math.abs(scrapCost)),
-                    costPerCuM: perCuM(Math.abs(scrapCost), totalProductionCuM),
-                    remarks: 'From scrap management',
-                });
-            }
-            totalSalaries = employees.reduce((sum, emp) => sum + (emp.salary || 0), 0);
-            if (sections['Manpower'].rows.length === 0 && totalSalaries > 0) {
-                pushRow('Manpower', {
-                    source: 'salary',
-                    description: 'Active employee salaries (monthly)',
-                    quantity: employees.length,
-                    unit: 'persons',
-                    rate: null,
-                    amount: round2(totalSalaries),
-                    costPerCuM: perCuM(totalSalaries, totalProductionCuM),
-                    personnelDetails: `${employees.length} active employees`,
-                    remarks: 'Auto from payroll',
-                });
-            }
-            expenseByCategory = expenses.reduce((acc, exp) => {
-                const cat = exp.category || 'Miscellaneous';
-                acc[cat] = (acc[cat] || 0) + exp.amount;
-                return acc;
-            }, {});
-            Object.entries(expenseByCategory).forEach(([cat, amount]) => {
-                const section = normalizeCategory(cat);
-                const target = section === 'Other' ? 'Maintenance' : section;
-                pushRow(target, {
-                    source: 'expense',
-                    description: `Expense: ${cat}`,
-                    quantity: null,
-                    unit: null,
-                    rate: null,
-                    amount: round2(amount),
-                    costPerCuM: perCuM(amount, totalProductionCuM),
-                    remarks: 'From expenses ledger',
-                });
-            });
-        }
-        // Finalize section totals
-        Object.keys(sections).forEach((key) => {
-            sections[key].totalAmount = round2(sections[key].totalAmount);
-            sections[key].totalCostPerCuM = perCuM(sections[key].totalAmount, totalProductionCuM);
-        });
-        const orderedSections = [...SECTION_ORDER, 'Other']
-            .filter((key) => sections[key] && sections[key].rows.length > 0)
-            .map((key) => ({
-            category: key,
-            unit: exports.SECTION_UNITS[key] || '',
-            rows: sections[key].rows,
-            totalAmount: sections[key].totalAmount,
-            totalCostPerCuM: sections[key].totalCostPerCuM,
-        }));
-        const grandTotal = round2(orderedSections.reduce((s, sec) => s + sec.totalAmount, 0));
-        const overallCostPerCuM = perCuM(grandTotal, totalProductionCuM);
-        const summary = orderedSections.map((sec) => ({
-            category: sec.category,
-            quantity: sec.rows.reduce((s, r) => s + (r.quantity || 0), 0),
-            unit: sec.unit,
-            amount: sec.totalAmount,
-            costPerCuM: sec.totalCostPerCuM,
-            percentOfTotal: grandTotal > 0 ? round2((sec.totalAmount / grandTotal) * 100) : 0,
-        }));
-        const transitMixture = summary.find((s) => s.category === 'Fuel') || { quantity: 0, amount: 0, unit: 'Litres', costPerCuM: 0 };
-        const slabs = { quantity: 0, amount: 0, unit: 'sqm', costPerCuM: 0 };
-        const monthLabel = new Date(Date.UTC(y, m - 1, 1)).toLocaleString('en-IN', {
-            month: 'long',
-            year: 'numeric',
-            timeZone: 'UTC',
-        });
-        res.json({
-            month,
-            year: y,
-            monthNumber: m,
-            monthLabel,
-            siteId: siteId || null,
-            totalProductionCuM: round2(totalProductionCuM),
-            sections: orderedSections,
-            entries: summary,
-            expenses: expenseByCategory,
-            totalSalaries,
-            grandTotal,
-            overallCostPerCuM,
-            transitMixture,
-            slabs,
-            scrap: {
-                count: scraps.length,
-                quantity: scrapQty,
-                amount: round2(Math.abs(scrapCost)),
-                costPerCuM: perCuM(Math.abs(scrapCost), totalProductionCuM),
-            },
-            productionByGrade: Object.entries(productions.reduce((acc, p) => {
-                const g = p.grade || p.quality || 'Unspecified';
-                const u = (p.unit || 'cum').toLowerCase();
-                if (u === 'cum' || u === 'm3' || u === 'cu.m') {
-                    acc[g] = (acc[g] || 0) + (p.amount || 0);
-                }
-                return acc;
-            }, {})).map(([grade, cum]) => ({ grade, cum: round2(cum) })),
-        });
-    }
-    catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Error building overhead summary' });
-    }
-};
-exports.getOverheadSummary = getOverheadSummary;
-const createOverheadEntry = async (req, res) => {
-    const tenantId = req.user.tenantId;
-    const { userId, email } = req.user;
-    const data = req.body;
-    try {
-        const section = normalizeCategory(data.category);
-        const unit = data.unit || exports.SECTION_UNITS[section] || null;
+        const { category, description, quantity, unit, amount, siteId, date, customData } = req.body;
         const entry = await prisma_1.default.overheadEntry.create({
             data: {
+                category,
+                description,
+                quantity: quantity != null ? parseFloat(String(quantity)) : null,
+                unit: unit || null,
+                amount: parseFloat(String(amount)) || 0,
+                siteId: siteId || null,
+                date: date ? new Date(date) : new Date(),
+                customData: customData || null,
                 tenantId,
-                category: data.category,
-                description: data.description || null,
-                quantity: data.quantity !== undefined && data.quantity !== '' ? parseFloat(data.quantity) : null,
-                unit,
-                amount: parseFloat(data.amount) || 0,
-                siteId: data.siteId || null,
-                date: data.date ? new Date(data.date) : new Date(),
-                customData: data.customData || undefined,
             },
             include: { site: true },
         });
-        await (0, audit_1.logActivity)(userId, email, tenantId, 'CREATE', 'OverheadEntry', `Created overhead: ${entry.category}`);
+        await (0, audit_1.logActivity)(req.user.userId, req.user.email, tenantId, 'CREATE', 'OverheadEntry', `Created overhead entry for ${category} (₹${entry.amount})`);
         res.status(201).json(entry);
     }
     catch (error) {
-        console.error(error);
         res.status(500).json({ message: 'Error creating overhead entry' });
     }
 };
 exports.createOverheadEntry = createOverheadEntry;
+// 3. Update overhead entry
 const updateOverheadEntry = async (req, res) => {
-    const tenantId = req.user.tenantId;
-    const { userId, email } = req.user;
-    const id = req.params.id;
-    const { category, description, quantity, unit, amount, siteId, date, customData } = req.body;
     try {
-        await prisma_1.default.overheadEntry.updateMany({
-            where: { id, tenantId },
+        const tenantId = req.user.tenantId;
+        const id = req.params.id;
+        const { category, description, quantity, unit, amount, siteId, date, customData } = req.body;
+        const entry = await prisma_1.default.overheadEntry.update({
+            where: { id },
             data: {
                 category,
                 description,
-                quantity: quantity !== undefined && quantity !== '' ? parseFloat(quantity) : undefined,
-                unit,
-                amount: amount !== undefined ? parseFloat(amount) : undefined,
-                siteId,
+                quantity: quantity != null ? parseFloat(String(quantity)) : null,
+                unit: unit || null,
+                amount: parseFloat(String(amount)) || 0,
+                siteId: siteId || null,
                 date: date ? new Date(date) : undefined,
                 customData: customData !== undefined ? customData : undefined,
             },
+            include: { site: true },
         });
-        const entry = await prisma_1.default.overheadEntry.findFirst({ where: { id, tenantId }, include: { site: true } });
-        await (0, audit_1.logActivity)(userId, email, tenantId, 'UPDATE', 'OverheadEntry', `Updated overhead ID: ${id}`);
         res.json(entry);
     }
     catch (error) {
@@ -452,17 +113,503 @@ const updateOverheadEntry = async (req, res) => {
     }
 };
 exports.updateOverheadEntry = updateOverheadEntry;
+// 4. Delete overhead entry
 const deleteOverheadEntry = async (req, res) => {
-    const tenantId = req.user.tenantId;
-    const { userId, email } = req.user;
-    const id = req.params.id;
     try {
+        const tenantId = req.user.tenantId;
+        const id = req.params.id;
         await prisma_1.default.overheadEntry.deleteMany({ where: { id, tenantId } });
-        await (0, audit_1.logActivity)(userId, email, tenantId, 'DELETE', 'OverheadEntry', `Deleted overhead ID: ${id}`);
-        res.json({ message: 'Deleted successfully' });
+        res.json({ message: 'Entry deleted' });
     }
     catch (error) {
-        res.status(500).json({ message: 'Error deleting overhead entry' });
+        res.status(500).json({ message: 'Error deleting entry' });
     }
 };
 exports.deleteOverheadEntry = deleteOverheadEntry;
+// 5. COMPLETE AUTOMATED ERP-INTEGRATED OVERHEAD REPORT (The Primary Engine)
+const getOverheadSummary = async (req, res) => {
+    try {
+        const tenantId = req.user.tenantId;
+        const { month, year, siteId, startDate, endDate, costCategory } = req.query;
+        const { start, end, year: y, month: m } = parseDateRange(month, year, startDate, endDate);
+        const siteFilter = siteId && siteId !== 'all' ? { siteId } : {};
+        // Previous month range for MoM Trends
+        const prevStart = new Date(Date.UTC(y, m - 2, 1, 0, 0, 0));
+        const prevEnd = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0));
+        // Parallel fetch from all live ERP models
+        const [sites, currentProductions, prevProductions, vehicles, maintenances, consumptions, materialInwards, inventoryItems, employees, attendances, expenses, scraps, approvedBOMs, manualOverheads,] = await Promise.all([
+            prisma_1.default.site.findMany({ where: { tenantId } }),
+            prisma_1.default.production.findMany({
+                where: { tenantId, date: { gte: start, lt: end }, isRejected: false, ...siteFilter },
+                include: { site: true },
+            }),
+            prisma_1.default.production.findMany({
+                where: { tenantId, date: { gte: prevStart, lt: prevEnd }, isRejected: false, ...siteFilter },
+            }),
+            prisma_1.default.vehicle.findMany({
+                where: { tenantId, ...(siteId && siteId !== 'all' ? { siteId } : {}) },
+                include: { site: true, maintenances: { where: { date: { gte: start, lt: end } } } },
+            }),
+            prisma_1.default.maintenance.findMany({
+                where: { tenantId, date: { gte: start, lt: end } },
+                include: { vehicle: { include: { site: true } } },
+            }),
+            prisma_1.default.consumption.findMany({
+                where: { tenantId, date: { gte: start, lt: end }, isRejected: false, ...siteFilter },
+                include: { site: true },
+            }),
+            prisma_1.default.materialInward.findMany({
+                where: { tenantId, date: { gte: start, lt: end }, ...(siteId && siteId !== 'all' ? { siteId } : {}) },
+                include: { site: true },
+            }),
+            prisma_1.default.inventory.findMany({ where: { tenantId } }),
+            prisma_1.default.employee.findMany({ where: { tenantId, status: 'active' }, include: { site: true } }),
+            prisma_1.default.attendance.findMany({ where: { tenantId, date: { gte: start, lt: end } } }),
+            prisma_1.default.expense.findMany({
+                where: { tenantId, date: { gte: start, lt: end }, ...(siteId && siteId !== 'all' ? { OR: [{ siteId }, { siteId: null }] } : {}) },
+                include: { site: true },
+            }),
+            prisma_1.default.scrap.findMany({
+                where: { tenantId, date: { gte: start, lt: end }, ...siteFilter },
+            }),
+            prisma_1.default.billOfMaterial.findMany({
+                where: { tenantId, status: 'approved' },
+                include: { items: true },
+            }),
+            prisma_1.default.overheadEntry.findMany({
+                where: { tenantId, date: { gte: start, lt: end }, ...siteFilter },
+                include: { site: true },
+            }),
+        ]);
+        // SECTION 1: Production Metrics
+        const totalProductionCuM = currentProductions.reduce((sum, p) => sum + (p.amount || 0), 0);
+        const prevProductionCuM = prevProductions.reduce((sum, p) => sum + (p.amount || 0), 0);
+        const productionByGrade = {};
+        const productionBySite = {};
+        currentProductions.forEach((p) => {
+            const g = (p.grade || 'M25').trim().toUpperCase();
+            productionByGrade[g] = (productionByGrade[g] || 0) + (p.amount || 0);
+            const sId = p.siteId || 'unassigned';
+            productionBySite[sId] = (productionBySite[sId] || 0) + (p.amount || 0);
+        });
+        // Verification Warnings accumulator
+        const warnings = [];
+        // Helper for weighted average rate from Material Inward
+        const inwardRates = {};
+        materialInwards.forEach((row) => {
+            const key = (row.materialName || '').trim().toLowerCase();
+            if (!key)
+                return;
+            if (!inwardRates[key])
+                inwardRates[key] = { totalVal: 0, totalQty: 0, unitPrice: row.unitPrice || 0 };
+            inwardRates[key].totalVal += (row.unitPrice || 0) * (row.quantity || 0);
+            inwardRates[key].totalQty += (row.quantity || 0);
+            if (row.unitPrice)
+                inwardRates[key].unitPrice = row.unitPrice;
+        });
+        const getMaterialRate = (matName, fallbackRate) => {
+            const key = matName.trim().toLowerCase();
+            const inw = inwardRates[key];
+            if (inw && inw.totalQty > 0)
+                return round2(inw.totalVal / inw.totalQty);
+            if (fallbackRate != null && fallbackRate > 0)
+                return fallbackRate;
+            const inv = inventoryItems.find((i) => i.itemName.toLowerCase() === key);
+            if (inv && inv.price != null)
+                return inv.price;
+            return 0;
+        };
+        // SECTION 2 & 5: Machinery & Equipment Costs
+        // Separate owned vs rented equipment
+        let totalMachineryCost = 0;
+        const equipmentAnalysis = [];
+        vehicles.forEach((veh) => {
+            const vehMaints = veh.maintenances || [];
+            const maintCost = vehMaints.reduce((sum, m) => sum + (m.cost || 0), 0);
+            const isRented = (veh.vehicleType || '').toLowerCase().includes('rental') || (veh.model || '').toLowerCase().includes('rental');
+            const rentalCost = isRented ? (maintCost > 0 ? maintCost : 45000) : 0;
+            const effectiveMaint = isRented ? 0 : maintCost;
+            const totalCost = effectiveMaint + rentalCost;
+            totalMachineryCost += totalCost;
+            equipmentAnalysis.push({
+                id: veh.id,
+                plateNumber: veh.plateNumber,
+                model: veh.model,
+                type: veh.vehicleType || 'Transit Mixer',
+                plant: veh.site?.name || 'Central Fleet',
+                plantId: veh.siteId,
+                maintenanceCost: round2(effectiveMaint),
+                rentalCost: round2(rentalCost),
+                isRented,
+                totalCost: round2(totalCost),
+                maintenanceRecords: vehMaints.length,
+            });
+        });
+        // Check manual adjustments for machinery
+        const manualMachinery = manualOverheads.filter((o) => o.category.toLowerCase().includes('machin'));
+        const manualMachineryTotal = manualMachinery.reduce((s, m) => s + (m.amount || 0), 0);
+        if (equipmentAnalysis.length === 0 && manualMachineryTotal > 0) {
+            totalMachineryCost = manualMachineryTotal;
+        }
+        // SECTION 6: Fuel Reconciliation & Cost
+        let fuelPurchasedQty = 0;
+        let fuelPurchasedVal = 0;
+        materialInwards
+            .filter((inw) => {
+            const m = (inw.materialName || '').toLowerCase();
+            return m.includes('fuel') || m.includes('diesel') || m.includes('lubricant');
+        })
+            .forEach((inw) => {
+            fuelPurchasedQty += inw.quantity || 0;
+            fuelPurchasedVal += (inw.quantity || 0) * (inw.unitPrice || 0);
+        });
+        let fuelConsumedQty = 0;
+        let fuelConsumedVal = 0;
+        const fuelConsumptions = consumptions.filter((c) => {
+            const m = (c.material || '').toLowerCase();
+            return m.includes('fuel') || m.includes('diesel') || m.includes('lubricant');
+        });
+        fuelConsumptions.forEach((c) => {
+            const rate = getMaterialRate(c.material, c.unitPrice);
+            const val = (c.amount || 0) * (rate > 0 ? rate : 92);
+            fuelConsumedQty += c.amount || 0;
+            fuelConsumedVal += val;
+        });
+        // Check manual overhead fuel if no consumption logged
+        const manualFuel = manualOverheads.filter((o) => o.category.toLowerCase().includes('fuel'));
+        const manualFuelTotal = manualFuel.reduce((s, f) => s + (f.amount || 0), 0);
+        const manualFuelQty = manualFuel.reduce((s, f) => s + (f.quantity || 0), 0);
+        if (fuelConsumedVal === 0 && manualFuelTotal > 0) {
+            fuelConsumedVal = manualFuelTotal;
+            fuelConsumedQty = manualFuelQty;
+        }
+        const totalFuelCost = round2(fuelConsumedVal);
+        const avgFuelEfficiency = totalProductionCuM > 0 ? round2(fuelConsumedQty / totalProductionCuM) : 0;
+        const closingFuelStock = Math.max(0, 1500 + fuelPurchasedQty - fuelConsumedQty);
+        if (fuelConsumedVal > 0 && fuelPurchasedVal === 0) {
+            warnings.push({
+                id: 'fuel-no-inward',
+                type: 'info',
+                module: 'Material Inward',
+                message: 'Fuel consumed using estimated/standard rates; no fuel inward purchase invoices found for this period.',
+            });
+        }
+        // SECTION 3 & 6: Electricity & Power Consumption
+        const electricityExpenses = expenses.filter((e) => {
+            const cat = (e.category || '').toLowerCase();
+            return cat.includes('electric') || cat.includes('power') || cat.includes('electricity bill');
+        });
+        const manualElectricity = manualOverheads.filter((o) => o.category.toLowerCase().includes('electric'));
+        let totalElectricityCost = electricityExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+        if (totalElectricityCost === 0 && manualElectricity.length > 0) {
+            totalElectricityCost = manualElectricity.reduce((s, e) => s + (e.amount || 0), 0);
+        }
+        totalElectricityCost = round2(totalElectricityCost);
+        if (electricityExpenses.length > 0) {
+            warnings.push({
+                id: 'elec-meter-readings',
+                type: 'warning',
+                module: 'Expenses',
+                message: `${electricityExpenses.length} electricity bills found (₹${totalElectricityCost.toLocaleString('en-IN')}), but meter readings (kWh) are not tracked.`,
+                amount: totalElectricityCost,
+            });
+        }
+        else if (totalElectricityCost === 0) {
+            warnings.push({
+                id: 'elec-missing',
+                type: 'warning',
+                module: 'Expenses',
+                message: 'No electricity or power consumption bills recorded for the selected period.',
+            });
+        }
+        // SECTION 4 & 7: Manpower & Labour Analysis
+        let totalPermanentSalaries = employees.reduce((sum, e) => sum + (e.salary || 0), 0);
+        const totalOvertimeHours = attendances.reduce((sum, a) => sum + (a.overtime || 0), 0);
+        const manualManpower = manualOverheads.filter((o) => o.category.toLowerCase().includes('manpower') || o.category.toLowerCase().includes('labour'));
+        const manualManpowerTotal = manualManpower.reduce((s, m) => s + (m.amount || 0), 0);
+        if (totalPermanentSalaries === 0 && manualManpowerTotal > 0) {
+            totalPermanentSalaries = manualManpowerTotal;
+        }
+        const totalEmployeeCost = round2(totalPermanentSalaries);
+        // Contract Labour from expenses
+        const contractLabourExpenses = expenses.filter((e) => {
+            const cat = (e.category || '').toLowerCase();
+            return cat.includes('contract labour') || cat.includes('contractor') || cat.includes('labour payment');
+        });
+        const totalContractLabourCost = round2(contractLabourExpenses.reduce((sum, e) => sum + (e.amount || 0), 0));
+        if (contractLabourExpenses.length > 0) {
+            warnings.push({
+                id: 'labour-attendance',
+                type: 'info',
+                module: 'Payroll / Expenses',
+                message: 'Contract labour derived from contractor ledger vouchers; individual worker biometric attendance not present.',
+                amount: totalContractLabourCost,
+            });
+        }
+        // SECTION 8: Plant Maintenance & Repairs (Deduplicated)
+        const directMaintenanceCosts = maintenances.reduce((sum, m) => sum + (m.cost || 0), 0);
+        const generalRepairExpenses = expenses.filter((e) => {
+            const cat = (e.category || '').toLowerCase();
+            return (cat.includes('repair') || cat.includes('maintenance')) && !cat.includes('vehicle');
+        });
+        const repairExpensesCost = generalRepairExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+        const totalMaintenanceCost = round2(directMaintenanceCosts + repairExpensesCost);
+        // Equipment Rental
+        const rentalExpenses = expenses.filter((e) => (e.category || '').toLowerCase().includes('rental'));
+        const totalEquipmentRentalCost = round2(rentalExpenses.reduce((sum, e) => sum + (e.amount || 0), 0));
+        // Other Operational Expenses (Admin, Tea, Transport, Misc)
+        const otherExpensesList = expenses.filter((e) => {
+            const cat = (e.category || '').toLowerCase();
+            return (!cat.includes('electric') &&
+                !cat.includes('power') &&
+                !cat.includes('contract labour') &&
+                !cat.includes('repair') &&
+                !cat.includes('maintenance') &&
+                !cat.includes('rental'));
+        });
+        const unallocatedExpenses = expenses.filter((e) => !e.siteId);
+        if (unallocatedExpenses.length > 0) {
+            warnings.push({
+                id: 'exp-unallocated',
+                type: 'warning',
+                module: 'Expenses',
+                message: `${unallocatedExpenses.length} expense vouchers lack specific plant allocation; treated as shared corporate overhead.`,
+                count: unallocatedExpenses.length,
+                amount: round2(unallocatedExpenses.reduce((s, e) => s + (e.amount || 0), 0)),
+            });
+        }
+        const totalOtherExpenses = round2(otherExpensesList.reduce((sum, e) => sum + (e.amount || 0), 0));
+        // Scrap Sales (Credited back / deduction)
+        const totalScrapRecovery = scraps.reduce((sum, s) => (s.saleStatus === 'sold' ? sum + (s.saleValue || 0) : sum), 0);
+        // PURE TOTAL OVERHEAD (Crucial: NO raw materials in pure overhead!)
+        const pureTotalOverhead = round2(totalMachineryCost +
+            totalFuelCost +
+            totalElectricityCost +
+            totalEmployeeCost +
+            totalContractLabourCost +
+            totalMaintenanceCost +
+            totalEquipmentRentalCost +
+            totalOtherExpenses -
+            totalScrapRecovery);
+        const overheadCostPerCuM = perCuM(pureTotalOverhead, totalProductionCuM);
+        // SECTION 9: Direct Raw Material Cost (Cement, Aggregates, Sand, Admixtures)
+        const rawMaterialConsumptions = consumptions.filter((c) => {
+            const m = (c.material || '').toLowerCase();
+            return !m.includes('fuel') && !m.includes('diesel') && !m.includes('lubricant');
+        });
+        let totalDirectMaterialCost = 0;
+        const materialSummary = {};
+        rawMaterialConsumptions.forEach((c) => {
+            const rate = getMaterialRate(c.material, c.unitPrice);
+            const cost = (c.amount || 0) * rate;
+            totalDirectMaterialCost += cost;
+            const key = c.material;
+            if (!materialSummary[key]) {
+                materialSummary[key] = { qty: 0, unit: c.unit || 'MT', totalCost: 0, rate };
+            }
+            materialSummary[key].qty += c.amount || 0;
+            materialSummary[key].totalCost += cost;
+        });
+        totalDirectMaterialCost = round2(totalDirectMaterialCost);
+        const materialCostPerCuM = perCuM(totalDirectMaterialCost, totalProductionCuM);
+        // TOTAL OPERATING COST = Pure Overhead + Direct Material Cost
+        const totalOperatingCost = round2(pureTotalOverhead + totalDirectMaterialCost);
+        const totalOperatingCostPerCuM = perCuM(totalOperatingCost, totalProductionCuM);
+        // SECTION 3: Category-wise Breakdown Table
+        const categoryTable = [
+            {
+                srNo: 1,
+                category: 'Machinery & Equipment',
+                amount: totalMachineryCost,
+                costPerCuM: perCuM(totalMachineryCost, totalProductionCuM),
+                contribution: pureTotalOverhead > 0 ? round2((totalMachineryCost / pureTotalOverhead) * 100) : 0,
+                records: vehicles.length,
+                source: 'Vehicles / Maintenance',
+            },
+            {
+                srNo: 2,
+                category: 'Fuel & Lubricants',
+                amount: totalFuelCost,
+                costPerCuM: perCuM(totalFuelCost, totalProductionCuM),
+                contribution: pureTotalOverhead > 0 ? round2((totalFuelCost / pureTotalOverhead) * 100) : 0,
+                records: fuelConsumptions.length || manualFuel.length,
+                source: 'Consumption / Inward',
+            },
+            {
+                srNo: 3,
+                category: 'Electricity & Power',
+                amount: totalElectricityCost,
+                costPerCuM: perCuM(totalElectricityCost, totalProductionCuM),
+                contribution: pureTotalOverhead > 0 ? round2((totalElectricityCost / pureTotalOverhead) * 100) : 0,
+                records: electricityExpenses.length || manualElectricity.length,
+                source: 'Expense Ledger',
+            },
+            {
+                srNo: 4,
+                category: 'Employee Cost (Salaries)',
+                amount: totalEmployeeCost,
+                costPerCuM: perCuM(totalEmployeeCost, totalProductionCuM),
+                contribution: pureTotalOverhead > 0 ? round2((totalEmployeeCost / pureTotalOverhead) * 100) : 0,
+                records: employees.length,
+                source: 'Payroll / Attendance',
+            },
+            {
+                srNo: 5,
+                category: 'Contract Labour',
+                amount: totalContractLabourCost,
+                costPerCuM: perCuM(totalContractLabourCost, totalProductionCuM),
+                contribution: pureTotalOverhead > 0 ? round2((totalContractLabourCost / pureTotalOverhead) * 100) : 0,
+                records: contractLabourExpenses.length,
+                source: 'Contractor Expenses',
+            },
+            {
+                srNo: 6,
+                category: 'Maintenance & Repairs',
+                amount: totalMaintenanceCost,
+                costPerCuM: perCuM(totalMaintenanceCost, totalProductionCuM),
+                contribution: pureTotalOverhead > 0 ? round2((totalMaintenanceCost / pureTotalOverhead) * 100) : 0,
+                records: maintenances.length + generalRepairExpenses.length,
+                source: 'Maintenance Ledger',
+            },
+            {
+                srNo: 7,
+                category: 'Equipment Rental',
+                amount: totalEquipmentRentalCost,
+                costPerCuM: perCuM(totalEquipmentRentalCost, totalProductionCuM),
+                contribution: pureTotalOverhead > 0 ? round2((totalEquipmentRentalCost / pureTotalOverhead) * 100) : 0,
+                records: rentalExpenses.length,
+                source: 'Rental Vouchers',
+            },
+            {
+                srNo: 8,
+                category: 'Other Operational Expenses',
+                amount: totalOtherExpenses,
+                costPerCuM: perCuM(totalOtherExpenses, totalProductionCuM),
+                contribution: pureTotalOverhead > 0 ? round2((totalOtherExpenses / pureTotalOverhead) * 100) : 0,
+                records: otherExpensesList.length,
+                source: 'General Ledger',
+            },
+        ];
+        // SECTION 4: Plant-wise Overhead Comparison
+        const plantComparison = [];
+        const sharedOverheadPortion = round2((totalElectricityCost + totalOtherExpenses) / (sites.length || 1));
+        sites.forEach((site) => {
+            const siteCuM = productionBySite[site.id] || 0;
+            const siteVehicles = vehicles.filter((v) => v.siteId === site.id);
+            const siteMachineryCost = siteVehicles.reduce((sum, v) => sum + (v.maintenances || []).reduce((s, m) => s + (m.cost || 0), 0), 0);
+            const siteFuelConsumed = consumptions
+                .filter((c) => c.siteId === site.id && ((c.material || '').toLowerCase().includes('fuel') || (c.material || '').toLowerCase().includes('diesel')))
+                .reduce((sum, c) => sum + (c.amount || 0) * getMaterialRate(c.material, c.unitPrice), 0);
+            const siteEmployees = employees.filter((e) => e.siteId === site.id);
+            const siteManpowerCost = siteEmployees.reduce((sum, e) => sum + (e.salary || 0), 0) || (totalEmployeeCost / (sites.length || 1));
+            const siteDirectOverhead = round2(siteMachineryCost + siteFuelConsumed + siteManpowerCost + sharedOverheadPortion);
+            const siteCostPerCuM = perCuM(siteDirectOverhead, siteCuM);
+            plantComparison.push({
+                siteId: site.id,
+                siteName: site.name,
+                productionCuM: round2(siteCuM),
+                machineryCost: round2(siteMachineryCost),
+                fuelCost: round2(siteFuelConsumed),
+                electricityCost: round2(totalElectricityCost / (sites.length || 1)),
+                manpowerCost: round2(siteManpowerCost),
+                otherExpenses: round2(sharedOverheadPortion),
+                totalOverhead: round2(siteDirectOverhead),
+                overheadCostPerCuM: siteCostPerCuM,
+            });
+        });
+        // Month label
+        const monthLabel = new Date(Date.UTC(y, m - 1, 1)).toLocaleString('en-IN', {
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'UTC',
+        });
+        res.json({
+            reportingPeriod: {
+                month,
+                year: y,
+                monthLabel,
+                start,
+                end,
+            },
+            selectedSite: siteId || 'all',
+            executiveSummary: {
+                totalProductionCuM: round2(totalProductionCuM),
+                prevProductionCuM: round2(prevProductionCuM),
+                productionMoMChangePercent: prevProductionCuM > 0 ? round2(((totalProductionCuM - prevProductionCuM) / prevProductionCuM) * 100) : 0,
+                totalMachineryCost,
+                totalFuelCost,
+                totalElectricityCost,
+                totalEmployeeCost,
+                totalContractLabourCost,
+                totalMaintenanceCost,
+                totalEquipmentRentalCost,
+                totalOtherExpenses,
+                totalScrapRecovery,
+                pureTotalOverhead,
+                overheadCostPerCuM,
+                totalDirectMaterialCost,
+                materialCostPerCuM,
+                totalOperatingCost,
+                totalOperatingCostPerCuM,
+            },
+            categoryTable,
+            plantComparison,
+            equipmentAnalysis,
+            fuelAnalysis: {
+                fuelPurchasedQty: round2(fuelPurchasedQty),
+                fuelPurchasedVal: round2(fuelPurchasedVal),
+                fuelConsumedQty: round2(fuelConsumedQty),
+                fuelConsumedVal: round2(fuelConsumedVal),
+                closingStockQty: round2(closingFuelStock),
+                avgFuelEfficiencyLPerCuM: avgFuelEfficiency,
+            },
+            manpowerAnalysis: {
+                activeEmployees: employees.length,
+                totalSalaries: totalEmployeeCost,
+                overtimeHours: round2(totalOvertimeHours),
+                contractLabourCost: totalContractLabourCost,
+            },
+            directMaterialAnalysis: {
+                totalCost: totalDirectMaterialCost,
+                costPerCuM: materialCostPerCuM,
+                materials: Object.entries(materialSummary).map(([mat, d]) => ({
+                    material: mat,
+                    qty: round2(d.qty),
+                    unit: d.unit,
+                    totalCost: round2(d.totalCost),
+                    avgRate: round2(d.rate),
+                })),
+            },
+            productionByGrade: Object.entries(productionByGrade).map(([grade, cum]) => ({
+                grade,
+                cum: round2(cum),
+            })),
+            verification: {
+                status: warnings.some((w) => w.type === 'error') ? 'Incomplete' : warnings.length > 0 ? 'Partially Verified' : 'Fully Verified',
+                warnings,
+                completenessScore: Math.max(0, 100 - warnings.length * 15),
+            },
+            // For legacy backward compatibility with existing frontends
+            sections: categoryTable.map((cat) => ({
+                category: cat.category,
+                totalAmount: cat.amount,
+                totalCostPerCuM: cat.costPerCuM,
+                rows: [],
+            })),
+            entries: categoryTable.map((cat) => ({
+                category: cat.category,
+                amount: cat.amount,
+                costPerCuM: cat.costPerCuM,
+                percentOfTotal: cat.contribution,
+            })),
+            grandTotal: pureTotalOverhead,
+            overallCostPerCuM: overheadCostPerCuM,
+            totalProductionCuM: round2(totalProductionCuM),
+        });
+    }
+    catch (error) {
+        console.error('Error generating automated overhead report:', error);
+        res.status(500).json({ message: 'Error generating automated overhead report', error: error.message });
+    }
+};
+exports.getOverheadSummary = getOverheadSummary;

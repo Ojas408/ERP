@@ -6,10 +6,10 @@ const rolePermissions = {
     'Super Admin': ['all'],
     'Admin': ['almost_everything'], // We can refine this later
     'HR': ['employees', 'payroll', 'attendance'],
-    'Accounts': ['expenses', 'reports/accounts', 'reports/business', 'vendors', 'purchase-orders', 'challans', 'material-inward', 'scrap', 'overhead-report', 'overhead'],
-    'Purchase': ['vendors', 'purchase-orders', 'inventory', 'challans', 'material-inward', 'scrap', 'rmc-grades'],
-    'Site Engineer': ['production', 'consumption', 'sites', 'inventory', 'challans', 'material-inward', 'scrap', 'rmc-grades'],
-    'Manager': ['reports/accounts', 'reports/business', 'reports/efficiency', 'reports/targets', 'reports/time-motion', 'reports/maintenance-overview', 'stats', 'dashboard', 'overhead-report', 'overhead'],
+    'Accounts': ['expenses', 'reports/accounts', 'reports/business', 'vendors', 'purchase-orders', 'challans', 'material-inward', 'scrap', 'overhead-report', 'overhead', 'bom'],
+    'Purchase': ['vendors', 'purchase-orders', 'inventory', 'challans', 'material-inward', 'scrap', 'rmc-grades', 'bom'],
+    'Site Engineer': ['production', 'consumption', 'sites', 'inventory', 'challans', 'material-inward', 'scrap', 'rmc-grades', 'bom'],
+    'Manager': ['reports/accounts', 'reports/business', 'reports/efficiency', 'reports/targets', 'reports/time-motion', 'reports/maintenance-overview', 'stats', 'dashboard', 'overhead-report', 'overhead', 'bom'],
     'Viewer': ['read_only'] // Special handling for Viewer
 };
 const authorize = (allowedModules) => {

@@ -100,24 +100,74 @@ export const createMaterialInward = (data: any) => createRecord('material-inward
 export const createRmcGrade = (data: any) => createRecord('rmc-grades', data);
 export const createScrap = (data: any) => createRecord('scrap', data);
 
-export const fetchOverheadEntries = (params?: { month?: string | number; year?: string | number; siteId?: string }) => {
+export const fetchOverheadEntries = (params?: { month?: string | number; year?: string | number; siteId?: string; startDate?: string; endDate?: string }) => {
   const q = new URLSearchParams();
   if (params?.month != null) q.set('month', String(params.month));
   if (params?.year != null) q.set('year', String(params.year));
   if (params?.siteId) q.set('siteId', params.siteId);
+  if (params?.startDate) q.set('startDate', params.startDate);
+  if (params?.endDate) q.set('endDate', params.endDate);
   const qs = q.toString();
   return fetchRecords(qs ? `overhead?${qs}` : 'overhead');
 };
-export const fetchOverheadSummary = (params?: { month?: string | number; year?: string | number; siteId?: string }) => {
+export const fetchOverheadSummary = (params?: { month?: string | number; year?: string | number; siteId?: string; startDate?: string; endDate?: string }) => {
   const q = new URLSearchParams();
   if (params?.month != null) q.set('month', String(params.month));
   if (params?.year != null) q.set('year', String(params.year));
   if (params?.siteId) q.set('siteId', params.siteId);
+  if (params?.startDate) q.set('startDate', params.startDate);
+  if (params?.endDate) q.set('endDate', params.endDate);
   const qs = q.toString();
   return fetchRecords(qs ? `overhead/summary?${qs}` : 'overhead/summary');
 };
 export const createOverheadEntry = (data: any) => createRecord('overhead', data);
 export const deleteOverheadEntry = (id: string) => deleteRecord('overhead', id);
+
+// Bill of Materials (BOM) API
+export const fetchBOMs = (params?: { gradeName?: string; siteId?: string; status?: string }) => {
+  return fetchRecords('bom', params);
+};
+export const fetchBOMById = (id: string) => fetchRecords(`bom/${id}`);
+export const createBOM = (data: any) => createRecord('bom', data);
+export const updateBOM = (id: string, data: any) => updateRecord('bom', id, data);
+export const deleteBOM = (id: string) => deleteRecord('bom', id);
+export const createBOMRevision = async (id: string, data: any) => {
+  const token = localStorage.getItem('erp_token');
+  const response = await fetch(`${API_BASE_URL}/bom/${id}/revision`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(response);
+};
+export const submitBOMForApproval = async (id: string) => {
+  const token = localStorage.getItem('erp_token');
+  const response = await fetch(`${API_BASE_URL}/bom/${id}/submit`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+  });
+  return handleResponse(response);
+};
+export const approveBOM = async (id: string) => {
+  const token = localStorage.getItem('erp_token');
+  const response = await fetch(`${API_BASE_URL}/bom/${id}/approve`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    },
+  });
+  return handleResponse(response);
+};
+export const fetchBOMComparison = (params?: { siteId?: string; month?: string | number; year?: string | number; startDate?: string; endDate?: string }) => {
+  return fetchRecords('bom/comparison', params);
+};
 
 // Document Attachment Upload Helpers
 export const uploadFile = async (file: File, entityFields: { employeeId?: string; vehicleId?: string; challanId?: string }) => {

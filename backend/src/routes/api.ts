@@ -24,6 +24,17 @@ import {
   deleteOverheadEntry,
 } from '../controllers/overheadController';
 import {
+  getBOMs,
+  getBOMById,
+  createBOM,
+  updateBOM,
+  deleteBOM,
+  createBOMRevision,
+  submitBOMForApproval,
+  approveBOM,
+  getBOMVsActualComparison,
+} from '../controllers/bomController';
+import {
   getAccountsReport,
   getBusinessReport,
   getEfficiencyReport,
@@ -163,11 +174,22 @@ router.put('/scrap/:id', authorize(['scrap']), updateScrap);
 router.delete('/scrap/:id', authorize(['scrap']), deleteScrap);
 
 // Overhead Report
-router.get('/overhead', authorize(['overhead-report', 'reports/accounts']), getOverheadEntries);
-router.get('/overhead/summary', authorize(['overhead-report', 'reports/accounts']), getOverheadSummary);
+router.get('/overhead', authorize(['overhead-report', 'reports/accounts', 'overhead']), getOverheadEntries);
+router.get('/overhead/summary', authorize(['overhead-report', 'reports/accounts', 'overhead']), getOverheadSummary);
 router.post('/overhead', authorize(['overhead-report']), createOverheadEntry);
 router.put('/overhead/:id', authorize(['overhead-report']), updateOverheadEntry);
 router.delete('/overhead/:id', authorize(['overhead-report']), deleteOverheadEntry);
+
+// Bill of Materials (BOM)
+router.get('/bom', authorize(['bom', 'all', 'admin', 'accounts', 'purchase', 'site engineer', 'manager']), getBOMs);
+router.get('/bom/comparison', authorize(['bom', 'all', 'admin', 'accounts', 'purchase', 'site engineer', 'manager', 'overhead-report']), getBOMVsActualComparison);
+router.get('/bom/:id', authorize(['bom', 'all', 'admin', 'accounts', 'purchase', 'site engineer', 'manager']), getBOMById);
+router.post('/bom', authorize(['bom', 'all', 'admin', 'purchase', 'site engineer']), createBOM);
+router.put('/bom/:id', authorize(['bom', 'all', 'admin', 'purchase', 'site engineer']), updateBOM);
+router.post('/bom/:id/revision', authorize(['bom', 'all', 'admin', 'purchase', 'site engineer']), createBOMRevision);
+router.post('/bom/:id/submit', authorize(['bom', 'all', 'admin', 'purchase', 'site engineer']), submitBOMForApproval);
+router.post('/bom/:id/approve', authorize(['bom', 'all', 'admin', 'manager']), approveBOM);
+router.delete('/bom/:id', authorize(['bom', 'all', 'admin']), deleteBOM);
 
 // Custom Columns
 router.get('/custom-columns', authorize(['all']), getCustomColumns);
