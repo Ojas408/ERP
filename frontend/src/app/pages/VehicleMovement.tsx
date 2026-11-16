@@ -4,7 +4,7 @@ import { KPICard } from "../components/dashboard/kpi-card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
-import { Truck, TruckIcon, Activity, Clock, Upload, Download, Plus, Edit, Trash2, RefreshCw, MapPin, FileSpreadsheet } from "lucide-react"
+import { Truck, TruckIcon, Activity, Clock, Upload, Download, Plus, Edit, Trash2, RefreshCw, MapPin, FileSpreadsheet , Printer} from "lucide-react"
 import { fetchVehicles, createVehicle, fetchVehicleMovements, createVehicleMovement, deleteRecord, updateRecord } from "../services/api"
 import {
   Dialog,
@@ -21,6 +21,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
+
+import { printReport } from "../lib/excel-helper"
 
 export default function VehicleMovement() {
   const [vehicles, setVehicles] = useState<any[]>([])
@@ -152,6 +154,8 @@ export default function VehicleMovement() {
   const availableCount = vehicles.filter(v => v.status === "available").length
   const inUseCount = vehicles.filter(v => v.status === "in-use").length
 
+  const handlePrintReport = () => printReport('Vehicle Incoming / Outgoing', ['Vehicle', 'Model', 'Status'], vehicles.map((v: any) => [v.plateNumber, v.model, v.status]))
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -160,6 +164,7 @@ export default function VehicleMovement() {
           <p className="text-sm text-muted-foreground">Fleet management and movement tracking</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="text-xs h-9" onClick={handlePrintReport}><Printer className="h-4 w-4 mr-2" />Print</Button>
           <Button variant="outline" className="text-xs h-9" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh

@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
-import { Users, UserPlus, TrendingUp, Award, Upload, Download, Eye, Edit, Trash2, RefreshCw, Plus } from "lucide-react"
+import { Users, UserPlus, TrendingUp, Award, Upload, Download, Eye, Edit, Trash2, RefreshCw, Plus , Printer} from "lucide-react"
 import { fetchEmployees, createEmployee, deleteRecord, updateRecord } from "../services/api"
 import {
   Dialog,
@@ -20,6 +20,8 @@ import {
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
+
+import { printReport } from "../lib/excel-helper"
 
 export default function EmployeeManagement() {
   const [employees, setEmployees] = useState<any[]>([])
@@ -135,6 +137,8 @@ export default function EmployeeManagement() {
     { month: "May", present: 98, absent: 2 },
   ]
 
+  const handlePrintReport = () => printReport('Employee Management', ['Employee Name', 'Position', 'Salary', 'Status'], employees.map((v: any) => [v.name, v.position, v.salary, v.status]))
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -145,6 +149,7 @@ export default function EmployeeManagement() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="text-xs h-9" onClick={handlePrintReport}><Printer className="h-4 w-4 mr-2" />Print</Button>
           <Button variant="outline" className="text-xs h-9" onClick={loadEmployees}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh

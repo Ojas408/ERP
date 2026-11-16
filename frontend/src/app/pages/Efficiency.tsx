@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { Progress } from "../components/ui/progress"
-import { Gauge, TrendingUp, Activity, Zap, Upload, Download, Eye, Edit, Trash2 } from "lucide-react"
+import { Gauge, TrendingUp, Activity, Zap, Upload, Download, Eye, Edit, Trash2 , Printer} from "lucide-react"
 import { fetchEfficiencyReport } from "../services/api"
 import { exportToExcel } from "../lib/excel-helper"
 import { FileSpreadsheet } from "lucide-react"
@@ -41,6 +41,8 @@ const equipmentEfficiency = [
   { id: "eq6", equipment: "Loader-2", uptime: 85, utilization: 81, efficiency: 79, status: "average" },
 ]
 
+import { printReport } from "../lib/excel-helper"
+
 export default function Efficiency() {
   const [report, setReport] = useState<any>(null)
 
@@ -72,6 +74,8 @@ export default function Efficiency() {
     exportToExcel(data, "efficiency_equipment_report")
   }
 
+  const handlePrintReport = () => printReport('Efficiency Report', ['Equipment', 'Uptime', 'Utilization', 'Efficiency', 'Status'], currentEquipmentEfficiency.map((v: any) => [v.equipment, v.uptime, v.utilization, v.efficiency, v.status]))
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -82,6 +86,7 @@ export default function Efficiency() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="text-xs h-9" onClick={handlePrintReport}><Printer className="h-4 w-4 mr-2" />Print</Button>
           <Button variant="outline" className="text-xs h-9">
             <Upload className="h-4 w-4 mr-2" />
             Import CSV

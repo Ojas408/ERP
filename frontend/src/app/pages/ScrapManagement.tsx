@@ -18,7 +18,7 @@ import {
   ChevronRight,
   TrendingUp,
   DollarSign
-} from "lucide-react"
+, Printer} from "lucide-react"
 import { 
   fetchScraps, 
   createScrap, 
@@ -36,6 +36,8 @@ import {
   DialogFooter,
 } from "../components/ui/dialog"
 import { toast } from "sonner"
+
+import { printReport } from "../lib/excel-helper"
 
 export default function ScrapManagement() {
   const [scraps, setScraps] = useState<any[]>([])
@@ -183,6 +185,8 @@ export default function ScrapManagement() {
   const scrapSalesRevenue = scraps.filter(s => s.saleStatus === "sold").reduce((sum, s) => sum + (s.saleValue || 0), 0)
   const storedScrapCount = scraps.filter(s => s.saleStatus === "stored").length
 
+  const handlePrintReport = () => printReport('Scrap Management', ['Date', 'Material', 'Quantity', 'Unit', 'Sale Status', 'Sale Value'], scraps.map((v: any) => [v.date, v.materialType, v.quantity, v.unit, v.saleStatus, v.saleValue]))
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -191,6 +195,7 @@ export default function ScrapManagement() {
           <p className="text-sm text-muted-foreground font-medium">Track generated site waste/scrap, stored inventory, and scrap sales revenue</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="text-xs h-9" onClick={handlePrintReport}><Printer className="h-4 w-4 mr-2" />Print</Button>
           <Button variant="outline" className="text-xs h-9" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh

@@ -4,7 +4,7 @@ import { KPICard } from "../components/dashboard/kpi-card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
-import { Building, TrendingUp, Clock, CheckCircle, Upload, Download, Edit, Trash2, RefreshCw, Plus } from "lucide-react"
+import { Building, TrendingUp, Clock, CheckCircle, Upload, Download, Edit, Trash2, RefreshCw, Plus , Printer} from "lucide-react"
 import { fetchVendors, createVendor, deleteRecord, updateRecord } from "../services/api"
 import {
   Dialog,
@@ -17,6 +17,8 @@ import {
 } from "../components/ui/dialog"
 import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
+
+import { printReport } from "../lib/excel-helper"
 
 export default function VendorManagement() {
   const [vendors, setVendors] = useState<any[]>([])
@@ -88,6 +90,8 @@ export default function VendorManagement() {
 
   const safeVendors = Array.isArray(vendors) ? vendors : []
 
+  const handlePrintReport = () => printReport('Vendor Management', ['Vendor Name', 'Category', 'Contact'], safeVendors.map((v: any) => [v.name, v.category, v.contact]))
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -96,6 +100,7 @@ export default function VendorManagement() {
           <p className="text-sm text-muted-foreground">Supplier relationships and procurement tracking</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="text-xs h-9" onClick={handlePrintReport}><Printer className="h-4 w-4 mr-2" />Print</Button>
           <Button variant="outline" className="text-xs h-9" onClick={loadVendors}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh

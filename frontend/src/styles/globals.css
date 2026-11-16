@@ -1,0 +1,4 @@
+
+/* ASKSHREE MixFlow brand and print helpers */
+:root { --askshree-navy: #101D3B; --askshree-blue: #1765B5; --askshree-cyan: #18A9D6; --askshree-ice: #EAF1F8; --askshree-charcoal: #171C26; }
+@media print { aside, nav, header, button, [data-print-hide="true"] { display: none !important; } body { background: #fff !important; color: #171C26 !important; } main { width: 100% !important; } }

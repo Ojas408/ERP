@@ -18,7 +18,7 @@ import {
   Download,
   Upload,
   FileSpreadsheet
-, Settings2 } from "lucide-react"
+, Settings2 , Printer} from "lucide-react"
 import { 
   fetchRmcGrades, 
   createRmcGrade, 
@@ -38,6 +38,8 @@ import { toast } from "sonner"
 import { exportToExcel, downloadExcelTemplate, parseExcelFile } from "../lib/excel-helper"
 import { ImportPreviewModal } from "../components/ImportPreviewModal"
 import { ManageColumnsModal } from "../components/ManageColumnsModal"
+
+import { printReport } from "../lib/excel-helper"
 
 export default function RMCGrade() {
   const [grades, setGrades] = useState<any[]>([])
@@ -210,10 +212,12 @@ export default function RMCGrade() {
     exportToExcel(data, "rmc_grades_report")
   }
 
+  const handlePrintReport = () => printReport('Grade of RMC', ['Grade', 'Mix Ratio', 'Cement Content', 'Water Cement Ratio', 'Admixture'], grades.map((v: any) => [v.grade, v.mixRatio, v.cementContent, v.waterCementRatio, v.admixture]))
+
   // Filter calculations
   const filteredGrades = grades.filter(item => {
     const searchLower = searchQuery.toLowerCase()
-    return (
+  return (
       (item.grade || "").toLowerCase().includes(searchLower) ||
       (item.mixRatio || "").toLowerCase().includes(searchLower) ||
       (item.description || "").toLowerCase().includes(searchLower)
@@ -240,6 +244,7 @@ export default function RMCGrade() {
           <p className="text-sm text-muted-foreground font-medium">Manage and define RMC grades, design mix proportions, and water-cement strength thresholds</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="text-xs h-9" onClick={handlePrintReport}><Printer className="h-4 w-4 mr-2" />Print</Button>
           <Button variant="outline" className="text-xs h-9" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh

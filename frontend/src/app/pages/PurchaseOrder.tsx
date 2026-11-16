@@ -10,8 +10,10 @@ import { Input } from "../components/ui/input"
 import { Label } from "../components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select"
 import { Textarea } from "../components/ui/textarea"
-import { ShoppingCart, Upload, Download, Eye, CheckCircle, XCircle, RefreshCw, Plus, Edit, Trash2 } from "lucide-react"
+import { ShoppingCart, Upload, Download, Eye, CheckCircle, XCircle, RefreshCw, Plus, Edit, Trash2 , Printer} from "lucide-react"
 import { fetchPurchaseOrders, createPurchaseOrder, fetchVendors, deleteRecord, updateRecord } from "../services/api"
+
+import { printReport } from "../lib/excel-helper"
 
 export default function PurchaseOrder() {
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([])
@@ -123,6 +125,8 @@ export default function PurchaseOrder() {
     return <Badge variant={(variants[status as keyof typeof variants] || "outline") as any} className="text-xs">{status}</Badge>
   }
 
+  const handlePrintReport = () => printReport('Purchase Orders', ['Order Number', 'Material', 'Quantity', 'Total Amount', 'Status'], purchaseOrders.map((v: any) => [v.orderNumber, v.material, v.quantity, v.totalAmount, v.status]))
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -131,6 +135,7 @@ export default function PurchaseOrder() {
           <p className="text-sm text-muted-foreground">Manage procurement and vendor orders</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="text-xs h-9" onClick={handlePrintReport}><Printer className="h-4 w-4 mr-2" />Print</Button>
           <Button variant="outline" className="text-xs h-9" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh

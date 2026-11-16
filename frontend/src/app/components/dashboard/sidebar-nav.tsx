@@ -85,7 +85,7 @@ export function SidebarNav({ activeModule, onModuleChange, mobile }: SidebarNavP
   })
 
   return (
-    <aside className={mobile ? "flex h-full w-full flex-col bg-sidebar" : "hidden md:flex h-screen w-64 flex-col border-r bg-sidebar"}>
+    <aside className={mobile ? "flex h-full w-full flex-col bg-[#101D3B]" : "hidden md:flex h-screen w-64 flex-col border-r border-[#263B60] bg-[#101D3B]"}>
       <ScrollArea className="flex-1 min-h-0 py-4">
         <nav className="flex flex-col gap-1 px-3">
           {filteredMenuItems.map((item) => {
@@ -97,8 +97,8 @@ export function SidebarNav({ activeModule, onModuleChange, mobile }: SidebarNavP
                 key={item.id}
                 variant={isActive ? "secondary" : "ghost"}
                 className={cn(
-                  "w-full justify-start gap-3 text-xs h-10",
-                  isActive && "bg-sidebar-accent text-sidebar-accent-foreground"
+                  "w-full justify-start gap-3 text-xs h-10 text-white/90 hover:bg-white/10 hover:text-white",
+                  isActive && "bg-[#1765B5] text-white hover:bg-[#1765B5]"
                 )}
                 onClick={() => onModuleChange(item.id)}
               >
