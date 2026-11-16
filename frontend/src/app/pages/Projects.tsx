@@ -391,7 +391,7 @@ export default function Projects({ onNavigate }: ProjectsProps) {
                 Add Project
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Add New Construction Project</DialogTitle>
                 <DialogDescription>
@@ -634,9 +634,9 @@ export default function Projects({ onNavigate }: ProjectsProps) {
                   <CardHeader className="pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <CardTitle className="text-base font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 hover:underline">
-                          {project.name}
-                          <ArrowUpRight className="h-4 w-4 opacity-70" />
+                        <CardTitle className="text-base font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 hover:underline break-words break-all [overflow-wrap:anywhere]">
+                          <span>{project.name}</span>
+                          <ArrowUpRight className="h-4 w-4 opacity-70 shrink-0" />
                         </CardTitle>
                         <CardDescription className="flex items-center gap-1 text-xs mt-1">
                           <MapPin className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
@@ -840,17 +840,19 @@ export default function Projects({ onNavigate }: ProjectsProps) {
                           className="cursor-pointer hover:bg-muted/60 transition-colors"
                           onClick={() => handleViewDetails(project)}
                         >
-                          <TableCell className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-                            <div className="flex items-center gap-1.5">
-                              <span className="hover:underline">{project.name}</span>
+                          <TableCell className="text-xs font-semibold text-blue-600 dark:text-blue-400 max-w-[240px]">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className="hover:underline truncate block" title={project.name}>{project.name}</span>
                               {isCurrentActive && (
-                                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-normal">
+                                <Badge variant="secondary" className="text-[9px] px-1.5 py-0 font-normal shrink-0">
                                   Active Site
                                 </Badge>
                               )}
                             </div>
                           </TableCell>
-                          <TableCell className="text-xs">{project.location || "N/A"}</TableCell>
+                          <TableCell className="text-xs max-w-[180px] truncate" title={project.location || "N/A"}>
+                            {project.location || "N/A"}
+                          </TableCell>
                           <TableCell className="text-xs">{project.clientName || "Direct Owner"}</TableCell>
                           <TableCell className="text-xs">{project.managerName || "Site Lead"}</TableCell>
                           <TableCell className="text-xs font-semibold font-mono text-emerald-600 dark:text-emerald-400">
@@ -924,39 +926,39 @@ export default function Projects({ onNavigate }: ProjectsProps) {
       {/* ============ PROJECT DETAILS MODAL / DRAWER (POPUP) ============== */}
       {/* ================================================================= */}
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-3xl md:max-w-4xl lg:max-w-5xl xl:max-w-6xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden shadow-2xl rounded-xl border">
           {selectedProject && (
-            <div>
-              {/* Top Banner Header */}
-              <div className="p-6 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white rounded-t-lg">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <div className="h-12 w-12 rounded-lg bg-white/10 flex items-center justify-center border border-white/20 flex-shrink-0">
-                      <Building2 className="h-6 w-6 text-white" />
+            <div className="flex flex-col h-full max-h-[92vh] overflow-hidden">
+              {/* Top Banner Header - dynamically scales, wraps, and leaves room for Radix close X */}
+              <div className="p-5 sm:p-6 pr-14 sm:pr-16 bg-gradient-to-r from-blue-900 via-blue-800 to-indigo-900 text-white shrink-0">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                  <div className="flex items-start gap-3.5 min-w-0 flex-1">
+                    <div className="h-11 w-11 sm:h-12 sm:w-12 rounded-lg bg-white/10 flex items-center justify-center border border-white/20 shrink-0 mt-0.5">
+                      <Building2 className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1 space-y-1.5">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h2 className="text-xl font-bold tracking-tight text-white">
+                        <h2 className="text-lg sm:text-2xl font-bold tracking-tight text-white break-words break-all [overflow-wrap:anywhere] leading-snug">
                           {selectedProject.name}
                         </h2>
-                        <Badge className="bg-white/20 hover:bg-white/30 text-white uppercase text-[10px] font-bold border-0">
+                        <Badge className="bg-white/20 hover:bg-white/30 text-white uppercase text-[10px] font-bold border-0 shrink-0">
                           {selectedProject.status}
                         </Badge>
                         {selectedSiteId === selectedProject.id && (
-                          <Badge className="bg-emerald-500 text-white text-[10px] font-bold border-0">
+                          <Badge className="bg-emerald-500 text-white text-[10px] font-bold border-0 shrink-0">
                             Active ERP Filter
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-blue-200 mt-1 flex items-center gap-1">
-                        <MapPin className="h-3.5 w-3.5 text-blue-300" />
-                        {selectedProject.location || "No site location specified"}
+                      <p className="text-xs text-blue-200 flex items-start gap-1 break-words break-all [overflow-wrap:anywhere] leading-relaxed">
+                        <MapPin className="h-3.5 w-3.5 text-blue-300 shrink-0 mt-0.5" />
+                        <span>{selectedProject.location || "No site location specified"}</span>
                       </p>
                     </div>
                   </div>
 
                   {/* Header Actions */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap shrink-0">
                     <Button
                       size="sm"
                       variant="secondary"
@@ -979,380 +981,395 @@ export default function Projects({ onNavigate }: ProjectsProps) {
                 </div>
               </div>
 
-              {/* Quick KPI Row */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 p-6 bg-muted/30 border-b">
-                <div className="p-3 rounded-lg bg-card border shadow-xs">
-                  <span className="text-[11px] text-muted-foreground uppercase block font-medium">
-                    Total Budget
-                  </span>
-                  <span className="text-lg font-bold font-mono text-emerald-600 dark:text-emerald-400">
-                    ${Number(selectedProject.budget || 5000000).toLocaleString()}
-                  </span>
-                </div>
-                <div className="p-3 rounded-lg bg-card border shadow-xs">
-                  <span className="text-[11px] text-muted-foreground uppercase block font-medium">
-                    Spent to Date
-                  </span>
-                  <span className="text-lg font-bold font-mono">
-                    ${Number(selectedProject.spent || 0).toLocaleString()}
-                  </span>
-                </div>
-                <div className="p-3 rounded-lg bg-card border shadow-xs">
-                  <span className="text-[11px] text-muted-foreground uppercase block font-medium">
-                    Milestone Progress
-                  </span>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Progress
-                      value={Number(selectedProject.progress || 0)}
-                      className="h-2 flex-1"
-                    />
-                    <span className="text-xs font-bold font-mono">
-                      {selectedProject.progress || 0}%
+              {/* Scrollable Body - overflow-y-auto overflow-x-hidden ensures NO horizontal scrollbar */}
+              <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0">
+                {/* Quick KPI Row */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 p-4 sm:p-6 bg-muted/30 border-b">
+                  <div className="p-3.5 rounded-lg bg-card border shadow-xs min-w-0 flex flex-col justify-between">
+                    <span className="text-[11px] text-muted-foreground uppercase block font-medium truncate">
+                      Total Budget
+                    </span>
+                    <span className="text-base sm:text-xl font-bold font-mono text-emerald-600 dark:text-emerald-400 break-words truncate">
+                      ${Number(selectedProject.budget || 5000000).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="p-3.5 rounded-lg bg-card border shadow-xs min-w-0 flex flex-col justify-between">
+                    <span className="text-[11px] text-muted-foreground uppercase block font-medium truncate">
+                      Spent to Date
+                    </span>
+                    <span className="text-base sm:text-xl font-bold font-mono break-words truncate">
+                      ${Number(selectedProject.spent || 0).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="p-3.5 rounded-lg bg-card border shadow-xs min-w-0 flex flex-col justify-between">
+                    <span className="text-[11px] text-muted-foreground uppercase block font-medium truncate">
+                      Milestone Progress
+                    </span>
+                    <div className="flex items-center gap-2 mt-1 min-w-0">
+                      <Progress
+                        value={Number(selectedProject.progress || 0)}
+                        className="h-2 flex-1 min-w-0"
+                      />
+                      <span className="text-xs font-bold font-mono shrink-0">
+                        {selectedProject.progress || 0}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="p-3.5 rounded-lg bg-card border shadow-xs min-w-0 flex flex-col justify-between">
+                    <span className="text-[11px] text-muted-foreground uppercase block font-medium truncate">
+                      Operations Logged
+                    </span>
+                    <span className="text-base sm:text-xl font-bold text-blue-600 dark:text-blue-400 truncate">
+                      {selectedProject._count
+                        ? (selectedProject._count.productions || 0) +
+                          (selectedProject._count.materialInwards || 0) +
+                          (selectedProject._count.vehicles || 0)
+                        : "Telemetry ready"}
                     </span>
                   </div>
                 </div>
-                <div className="p-3 rounded-lg bg-card border shadow-xs">
-                  <span className="text-[11px] text-muted-foreground uppercase block font-medium">
-                    Operations Logged
-                  </span>
-                  <span className="text-lg font-bold text-blue-600 dark:text-blue-400">
-                    {selectedProject._count
-                      ? (selectedProject._count.productions || 0) +
-                        (selectedProject._count.materialInwards || 0) +
-                        (selectedProject._count.vehicles || 0)
-                      : "Telemetry ready"}
-                  </span>
+
+                {/* Tabs Section */}
+                <div className="p-4 sm:p-6">
+                  <Tabs defaultValue="overview" className="w-full">
+                    <TabsList className="grid grid-cols-1 sm:grid-cols-3 h-auto p-1 gap-1 mb-6">
+                      <TabsTrigger value="overview" className="text-xs sm:text-sm py-2 px-3 text-center">
+                        Project Overview
+                      </TabsTrigger>
+                      <TabsTrigger value="operations" className="text-xs sm:text-sm py-2 px-3 text-center truncate">
+                        Site Operations & Fleet
+                      </TabsTrigger>
+                      <TabsTrigger value="actions" className="text-xs sm:text-sm py-2 px-3 text-center truncate">
+                        Linked ERP Navigation
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {/* Tab 1: Project Overview */}
+                    <TabsContent value="overview" className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Project Metadata Details */}
+                        <Card className="min-w-0">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                              <Briefcase className="h-4 w-4 text-blue-600 shrink-0" />
+                              General Information
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-1 text-xs">
+                            <div className="flex items-start justify-between gap-4 py-2.5 border-b">
+                              <span className="text-muted-foreground shrink-0 text-xs">Project Name</span>
+                              <span className="font-semibold text-xs sm:text-sm text-right break-words break-all [overflow-wrap:anywhere] max-w-[68%]">
+                                {selectedProject.name}
+                              </span>
+                            </div>
+                            <div className="flex items-start justify-between gap-4 py-2.5 border-b">
+                              <span className="text-muted-foreground shrink-0 text-xs">Site Location</span>
+                              <span className="font-medium text-xs sm:text-sm text-right break-words break-all [overflow-wrap:anywhere] max-w-[68%]">
+                                {selectedProject.location || "N/A"}
+                              </span>
+                            </div>
+                            <div className="flex items-start justify-between gap-4 py-2.5 border-b">
+                              <span className="text-muted-foreground shrink-0 text-xs">Client / Developer</span>
+                              <span className="font-semibold text-xs sm:text-sm text-right text-blue-600 dark:text-blue-400 break-words break-all [overflow-wrap:anywhere] max-w-[68%]">
+                                {selectedProject.clientName || "Direct Owner / Self"}
+                              </span>
+                            </div>
+                            <div className="flex items-start justify-between gap-4 py-2.5 border-b">
+                              <span className="text-muted-foreground shrink-0 text-xs">Project Manager</span>
+                              <span className="font-medium text-xs sm:text-sm text-right break-words break-all [overflow-wrap:anywhere] max-w-[68%]">
+                                {selectedProject.managerName || "Site In-Charge Engineer"}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4 py-2.5 border-b">
+                              <span className="text-muted-foreground shrink-0 text-xs">Operational Status</span>
+                              <Badge variant="outline" className="text-[10px] uppercase font-bold shrink-0">
+                                {selectedProject.status}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between gap-4 py-2.5">
+                              <span className="text-muted-foreground shrink-0 text-xs">Unique Site ID</span>
+                              <span className="font-mono text-[11px] text-muted-foreground break-all truncate max-w-[65%]">
+                                {selectedProject.id}
+                              </span>
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Timeline & Budget Breakdown */}
+                        <Card className="min-w-0">
+                          <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+                              <DollarSign className="h-4 w-4 text-emerald-600 shrink-0" />
+                              Schedule & Financial Standing
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-1 text-xs">
+                            <div className="flex items-center justify-between gap-4 py-2.5 border-b">
+                              <span className="text-muted-foreground shrink-0 text-xs">Project Start Date</span>
+                              <span className="font-mono text-xs sm:text-sm">
+                                {selectedProject.startDate
+                                  ? new Date(selectedProject.startDate).toLocaleDateString()
+                                  : "Scheduled / Ongoing"}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4 py-2.5 border-b">
+                              <span className="text-muted-foreground shrink-0 text-xs">Target Handover Date</span>
+                              <span className="font-mono text-xs sm:text-sm">
+                                {selectedProject.endDate
+                                  ? new Date(selectedProject.endDate).toLocaleDateString()
+                                  : "Phase Wise Completion"}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4 py-2.5 border-b">
+                              <span className="text-muted-foreground shrink-0 text-xs">Remaining Budget</span>
+                              <span className="font-mono font-bold text-xs sm:text-sm text-emerald-600 dark:text-emerald-400">
+                                $
+                                {(
+                                  Number(selectedProject.budget || 5000000) -
+                                  Number(selectedProject.spent || 0)
+                                ).toLocaleString()}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4 py-2.5 border-b">
+                              <span className="text-muted-foreground shrink-0 text-xs">Budget Burn Rate</span>
+                              <span className="font-mono font-medium text-xs sm:text-sm">
+                                {Number(selectedProject.budget || 0) > 0
+                                  ? (
+                                      (Number(selectedProject.spent || 0) /
+                                        Number(selectedProject.budget || 5000000)) *
+                                      100
+                                    ).toFixed(1) + "%"
+                                  : "0%"}
+                              </span>
+                            </div>
+                            <div className="pt-2">
+                              <span className="text-muted-foreground block text-[11px] mb-1">
+                                Project Scope & Objectives:
+                              </span>
+                              <p className="p-3 rounded bg-muted/40 text-muted-foreground text-xs italic break-words break-all [overflow-wrap:anywhere] leading-relaxed">
+                                {selectedProject.description ||
+                                  "Full turn-key construction project covering civil structural works, RCC framing, and finishing."}
+                              </p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </TabsContent>
+
+                    {/* Tab 2: Operations & Telemetry */}
+                    <TabsContent value="operations" className="space-y-4">
+                      {projectDetailsLoading ? (
+                        <div className="py-8 text-center text-xs text-muted-foreground">
+                          <RefreshCw className="h-4 w-4 animate-spin mx-auto mb-2 text-blue-600" />
+                          Fetching site operations data...
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          {/* Concrete Production Summary */}
+                          <Card className="min-w-0">
+                            <CardHeader className="py-3 px-4">
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <CardTitle className="text-xs font-semibold flex items-center gap-2">
+                                  <Factory className="h-4 w-4 text-blue-600 shrink-0" />
+                                  Recent Concrete & RMC Production Pours
+                                </CardTitle>
+                                <Badge variant="outline" className="text-[10px]">
+                                  {selectedProject.productions?.length || 0} Batches Logged
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                              <div className="overflow-x-auto w-full">
+                                {selectedProject.productions && selectedProject.productions.length > 0 ? (
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="text-xs whitespace-nowrap">Date</TableHead>
+                                        <TableHead className="text-xs whitespace-nowrap">Grade</TableHead>
+                                        <TableHead className="text-xs whitespace-nowrap">Volume</TableHead>
+                                        <TableHead className="text-xs whitespace-nowrap">Structure / Tower</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {selectedProject.productions.map((prod: any) => (
+                                        <TableRow key={prod.id}>
+                                          <TableCell className="text-xs font-mono whitespace-nowrap">
+                                            {new Date(prod.date || prod.createdAt).toLocaleDateString()}
+                                          </TableCell>
+                                          <TableCell className="text-xs font-semibold text-blue-600 whitespace-nowrap">
+                                            {prod.grade || "Standard Mix"}
+                                          </TableCell>
+                                          <TableCell className="text-xs font-mono font-bold whitespace-nowrap">
+                                            {prod.amount} {prod.unit || "cum"}
+                                          </TableCell>
+                                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                            {prod.towerName || prod.notes || "General Pour"}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                ) : (
+                                  <div className="p-4 text-center text-xs text-muted-foreground">
+                                    No direct concrete batch records linked to this site yet.
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+
+                          {/* Raw Material Inward */}
+                          <Card className="min-w-0">
+                            <CardHeader className="py-3 px-4">
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <CardTitle className="text-xs font-semibold flex items-center gap-2">
+                                  <Package className="h-4 w-4 text-amber-600 shrink-0" />
+                                  Material Inward & Delivery Log
+                                </CardTitle>
+                                <Badge variant="outline" className="text-[10px]">
+                                  {selectedProject.materialInwards?.length || 0} Inward Shipments
+                                </Badge>
+                              </div>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                              <div className="overflow-x-auto w-full">
+                                {selectedProject.materialInwards &&
+                                selectedProject.materialInwards.length > 0 ? (
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="text-xs whitespace-nowrap">Date</TableHead>
+                                        <TableHead className="text-xs whitespace-nowrap">Material</TableHead>
+                                        <TableHead className="text-xs whitespace-nowrap">Quantity</TableHead>
+                                        <TableHead className="text-xs whitespace-nowrap">Challan / Ref</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {selectedProject.materialInwards.map((inw: any) => (
+                                        <TableRow key={inw.id}>
+                                          <TableCell className="text-xs font-mono whitespace-nowrap">
+                                            {new Date(inw.date || inw.createdAt).toLocaleDateString()}
+                                          </TableCell>
+                                          <TableCell className="text-xs font-semibold whitespace-nowrap">
+                                            {inw.materialType || inw.itemName || "Raw Material"}
+                                          </TableCell>
+                                          <TableCell className="text-xs font-mono font-bold whitespace-nowrap">
+                                            {inw.netWeight || inw.quantity} {inw.unit || "Tons"}
+                                          </TableCell>
+                                          <TableCell className="text-xs text-muted-foreground font-mono whitespace-nowrap">
+                                            {inw.challanNo || inw.vehicleNo || "N/A"}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                ) : (
+                                  <div className="p-4 text-center text-xs text-muted-foreground">
+                                    No inward material dispatches registered specifically for this site.
+                                  </div>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    {/* Tab 3: Linked ERP Navigation */}
+                    <TabsContent value="actions" className="space-y-4">
+                      <p className="text-xs text-muted-foreground">
+                        Jump directly to related operational modules pre-filtered for{" "}
+                        <strong className="text-foreground break-words">{selectedProject.name}</strong>:
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <Button
+                          variant="outline"
+                          className="h-auto min-h-[4.5rem] justify-start gap-3.5 p-4 text-left w-full hover:border-blue-500/50 hover:bg-accent/50 transition-all"
+                          onClick={() => {
+                            handleSetActiveSite(selectedProject)
+                            setIsDetailOpen(false)
+                            onNavigate?.("production")
+                          }}
+                        >
+                          <Factory className="h-6 w-6 text-blue-600 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs sm:text-sm font-bold truncate">View Site Production</div>
+                            <div className="text-[11px] text-muted-foreground truncate">
+                              Batching records & RMC grades
+                            </div>
+                          </div>
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          className="h-auto min-h-[4.5rem] justify-start gap-3.5 p-4 text-left w-full hover:border-amber-500/50 hover:bg-accent/50 transition-all"
+                          onClick={() => {
+                            handleSetActiveSite(selectedProject)
+                            setIsDetailOpen(false)
+                            onNavigate?.("material-inward")
+                          }}
+                        >
+                          <Package className="h-6 w-6 text-amber-600 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs sm:text-sm font-bold truncate">Material Inward Gate</div>
+                            <div className="text-[11px] text-muted-foreground truncate">
+                              Cement, aggregate, steel weighbridge
+                            </div>
+                          </div>
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          className="h-auto min-h-[4.5rem] justify-start gap-3.5 p-4 text-left w-full hover:border-emerald-500/50 hover:bg-accent/50 transition-all"
+                          onClick={() => {
+                            handleSetActiveSite(selectedProject)
+                            setIsDetailOpen(false)
+                            onNavigate?.("equipment")
+                          }}
+                        >
+                          <Truck className="h-6 w-6 text-emerald-600 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs sm:text-sm font-bold truncate">Assigned Equipment & Fleet</div>
+                            <div className="text-[11px] text-muted-foreground truncate">
+                              Transit mixers, pumps & cranes
+                            </div>
+                          </div>
+                        </Button>
+
+                        <Button
+                          variant="outline"
+                          className="h-auto min-h-[4.5rem] justify-start gap-3.5 p-4 text-left w-full hover:border-purple-500/50 hover:bg-accent/50 transition-all"
+                          onClick={() => {
+                            handleSetActiveSite(selectedProject)
+                            setIsDetailOpen(false)
+                            onNavigate?.("challan")
+                          }}
+                        >
+                          <Activity className="h-6 w-6 text-purple-600 shrink-0" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs sm:text-sm font-bold truncate">Delivery Challans</div>
+                            <div className="text-[11px] text-muted-foreground truncate">
+                              Generate & print site dispatch slips
+                            </div>
+                          </div>
+                        </Button>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
                 </div>
               </div>
 
-              {/* Tabs Section */}
-              <div className="p-6">
-                <Tabs defaultValue="overview" className="w-full">
-                  <TabsList className="grid grid-cols-3 mb-6">
-                    <TabsTrigger value="overview">Project Overview</TabsTrigger>
-                    <TabsTrigger value="operations">Site Operations & Fleet</TabsTrigger>
-                    <TabsTrigger value="actions">Linked ERP Navigation</TabsTrigger>
-                  </TabsList>
-
-                  {/* Tab 1: Project Overview */}
-                  <TabsContent value="overview" className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Project Metadata Details */}
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                            <Briefcase className="h-4 w-4 text-blue-600" />
-                            General Information
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3 text-xs">
-                          <div className="flex justify-between py-1.5 border-b">
-                            <span className="text-muted-foreground">Project Name</span>
-                            <span className="font-semibold">{selectedProject.name}</span>
-                          </div>
-                          <div className="flex justify-between py-1.5 border-b">
-                            <span className="text-muted-foreground">Site Location</span>
-                            <span className="font-medium text-right max-w-[200px] truncate">
-                              {selectedProject.location || "N/A"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-1.5 border-b">
-                            <span className="text-muted-foreground">Client / Developer</span>
-                            <span className="font-semibold text-blue-600 dark:text-blue-400">
-                              {selectedProject.clientName || "Direct Owner / Self"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-1.5 border-b">
-                            <span className="text-muted-foreground">Project Manager</span>
-                            <span className="font-medium">
-                              {selectedProject.managerName || "Site In-Charge Engineer"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-1.5 border-b">
-                            <span className="text-muted-foreground">Operational Status</span>
-                            <Badge variant="outline" className="text-[10px] uppercase font-bold">
-                              {selectedProject.status}
-                            </Badge>
-                          </div>
-                          <div className="flex justify-between py-1.5">
-                            <span className="text-muted-foreground">Unique Site ID</span>
-                            <span className="font-mono text-[11px] text-muted-foreground">
-                              {selectedProject.id}
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-
-                      {/* Timeline & Budget Breakdown */}
-                      <Card>
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                            <DollarSign className="h-4 w-4 text-emerald-600" />
-                            Schedule & Financial Standing
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3 text-xs">
-                          <div className="flex justify-between py-1.5 border-b">
-                            <span className="text-muted-foreground">Project Start Date</span>
-                            <span className="font-mono">
-                              {selectedProject.startDate
-                                ? new Date(selectedProject.startDate).toLocaleDateString()
-                                : "Scheduled / Ongoing"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-1.5 border-b">
-                            <span className="text-muted-foreground">Target Handover Date</span>
-                            <span className="font-mono">
-                              {selectedProject.endDate
-                                ? new Date(selectedProject.endDate).toLocaleDateString()
-                                : "Phase Wise Completion"}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-1.5 border-b">
-                            <span className="text-muted-foreground">Remaining Budget</span>
-                            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                              $
-                              {(
-                                Number(selectedProject.budget || 5000000) -
-                                Number(selectedProject.spent || 0)
-                              ).toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="flex justify-between py-1.5 border-b">
-                            <span className="text-muted-foreground">Budget Burn Rate</span>
-                            <span className="font-mono font-medium">
-                              {Number(selectedProject.budget || 0) > 0
-                                ? (
-                                    (Number(selectedProject.spent || 0) /
-                                      Number(selectedProject.budget || 5000000)) *
-                                    100
-                                  ).toFixed(1) + "%"
-                                : "0%"}
-                            </span>
-                          </div>
-                          <div className="pt-2">
-                            <span className="text-muted-foreground block text-[11px] mb-1">
-                              Project Scope & Objectives:
-                            </span>
-                            <p className="p-2.5 rounded bg-muted/40 text-muted-foreground text-[11px] italic">
-                              {selectedProject.description ||
-                                "Full turn-key construction project covering civil structural works, RCC framing, and finishing."}
-                            </p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  </TabsContent>
-
-                  {/* Tab 2: Operations & Telemetry */}
-                  <TabsContent value="operations" className="space-y-4">
-                    {projectDetailsLoading ? (
-                      <div className="py-8 text-center text-xs text-muted-foreground">
-                        <RefreshCw className="h-4 w-4 animate-spin mx-auto mb-2 text-blue-600" />
-                        Fetching site operations data...
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        {/* Concrete Production Summary */}
-                        <Card>
-                          <CardHeader className="py-3 px-4">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-xs font-semibold flex items-center gap-2">
-                                <Factory className="h-4 w-4 text-blue-600" />
-                                Recent Concrete & RMC Production Pours
-                              </CardTitle>
-                              <Badge variant="outline" className="text-[10px]">
-                                {selectedProject.productions?.length || 0} Batches Logged
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="p-0">
-                            {selectedProject.productions && selectedProject.productions.length > 0 ? (
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="text-xs">Date</TableHead>
-                                    <TableHead className="text-xs">Grade</TableHead>
-                                    <TableHead className="text-xs">Volume (cum)</TableHead>
-                                    <TableHead className="text-xs">Structure / Tower</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {selectedProject.productions.map((prod: any) => (
-                                    <TableRow key={prod.id}>
-                                      <TableCell className="text-xs font-mono">
-                                        {new Date(prod.date || prod.createdAt).toLocaleDateString()}
-                                      </TableCell>
-                                      <TableCell className="text-xs font-semibold text-blue-600">
-                                        {prod.grade || "Standard Mix"}
-                                      </TableCell>
-                                      <TableCell className="text-xs font-mono font-bold">
-                                        {prod.amount} {prod.unit || "cum"}
-                                      </TableCell>
-                                      <TableCell className="text-xs text-muted-foreground">
-                                        {prod.towerName || prod.notes || "General Pour"}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            ) : (
-                              <div className="p-4 text-center text-xs text-muted-foreground">
-                                No direct concrete batch records linked to this site yet.
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-
-                        {/* Raw Material Inward */}
-                        <Card>
-                          <CardHeader className="py-3 px-4">
-                            <div className="flex items-center justify-between">
-                              <CardTitle className="text-xs font-semibold flex items-center gap-2">
-                                <Package className="h-4 w-4 text-amber-600" />
-                                Material Inward & Delivery Log
-                              </CardTitle>
-                              <Badge variant="outline" className="text-[10px]">
-                                {selectedProject.materialInwards?.length || 0} Inward Shipments
-                              </Badge>
-                            </div>
-                          </CardHeader>
-                          <CardContent className="p-0">
-                            {selectedProject.materialInwards &&
-                            selectedProject.materialInwards.length > 0 ? (
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead className="text-xs">Date</TableHead>
-                                    <TableHead className="text-xs">Material</TableHead>
-                                    <TableHead className="text-xs">Quantity</TableHead>
-                                    <TableHead className="text-xs">Challan / Ref</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {selectedProject.materialInwards.map((inw: any) => (
-                                    <TableRow key={inw.id}>
-                                      <TableCell className="text-xs font-mono">
-                                        {new Date(inw.date || inw.createdAt).toLocaleDateString()}
-                                      </TableCell>
-                                      <TableCell className="text-xs font-semibold">
-                                        {inw.materialType || inw.itemName || "Raw Material"}
-                                      </TableCell>
-                                      <TableCell className="text-xs font-mono font-bold">
-                                        {inw.netWeight || inw.quantity} {inw.unit || "Tons"}
-                                      </TableCell>
-                                      <TableCell className="text-xs text-muted-foreground font-mono">
-                                        {inw.challanNo || inw.vehicleNo || "N/A"}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            ) : (
-                              <div className="p-4 text-center text-xs text-muted-foreground">
-                                No inward material dispatches registered specifically for this site.
-                              </div>
-                            )}
-                          </CardContent>
-                        </Card>
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  {/* Tab 3: Linked ERP Navigation */}
-                  <TabsContent value="actions" className="space-y-4">
-                    <p className="text-xs text-muted-foreground">
-                      Jump directly to related operational modules pre-filtered for{" "}
-                      <strong>{selectedProject.name}</strong>:
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <Button
-                        variant="outline"
-                        className="h-16 justify-start gap-3 p-4"
-                        onClick={() => {
-                          handleSetActiveSite(selectedProject)
-                          setIsDetailOpen(false)
-                          onNavigate?.("production")
-                        }}
-                      >
-                        <Factory className="h-6 w-6 text-blue-600" />
-                        <div className="text-left">
-                          <div className="text-xs font-bold">View Site Production</div>
-                          <div className="text-[10px] text-muted-foreground">
-                            Batching records & RMC grades
-                          </div>
-                        </div>
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        className="h-16 justify-start gap-3 p-4"
-                        onClick={() => {
-                          handleSetActiveSite(selectedProject)
-                          setIsDetailOpen(false)
-                          onNavigate?.("material-inward")
-                        }}
-                      >
-                        <Package className="h-6 w-6 text-amber-600" />
-                        <div className="text-left">
-                          <div className="text-xs font-bold">Material Inward Gate</div>
-                          <div className="text-[10px] text-muted-foreground">
-                            Cement, aggregate, steel weighbridge
-                          </div>
-                        </div>
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        className="h-16 justify-start gap-3 p-4"
-                        onClick={() => {
-                          handleSetActiveSite(selectedProject)
-                          setIsDetailOpen(false)
-                          onNavigate?.("equipment")
-                        }}
-                      >
-                        <Truck className="h-6 w-6 text-emerald-600" />
-                        <div className="text-left">
-                          <div className="text-xs font-bold">Assigned Equipment & Fleet</div>
-                          <div className="text-[10px] text-muted-foreground">
-                            Transit mixers, pumps & cranes
-                          </div>
-                        </div>
-                      </Button>
-
-                      <Button
-                        variant="outline"
-                        className="h-16 justify-start gap-3 p-4"
-                        onClick={() => {
-                          handleSetActiveSite(selectedProject)
-                          setIsDetailOpen(false)
-                          onNavigate?.("challan")
-                        }}
-                      >
-                        <Activity className="h-6 w-6 text-purple-600" />
-                        <div className="text-left">
-                          <div className="text-xs font-bold">Delivery Challans</div>
-                          <div className="text-[10px] text-muted-foreground">
-                            Generate & print site dispatch slips
-                          </div>
-                        </div>
-                      </Button>
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </div>
-
               {/* Bottom Footer Actions */}
-              <div className="p-4 bg-muted/20 border-t flex items-center justify-between">
+              <div className="p-4 bg-muted/20 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="text-xs"
+                  className="text-xs order-2 sm:order-1"
                   onClick={() => setIsDetailOpen(false)}
                 >
                   Close Window
                 </Button>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2 order-1 sm:order-2 flex-wrap">
                   <Button
                     variant="outline"
                     size="sm"
@@ -1394,7 +1411,7 @@ export default function Projects({ onNavigate }: ProjectsProps) {
       {/* ======================= EDIT PROJECT MODAL ======================= */}
       {/* ================================================================= */}
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Project Details</DialogTitle>
             <DialogDescription>

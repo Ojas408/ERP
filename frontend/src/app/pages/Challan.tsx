@@ -1177,7 +1177,7 @@ export default function Challan() {
                 <div className="challan-header flex justify-between border-b pb-4">
                   <div>
                     <h2 className="challan-title text-xl font-bold text-blue-900 uppercase">Material Delivery Challan</h2>
-                    <p className="text-xs text-muted-foreground mt-1">Construction ERP Logistics System</p>
+                    <p className="text-xs text-muted-foreground mt-1">ASKSHREE MixFlow Logistics System</p>
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-xs text-slate-500 uppercase">Challan Ref Number</p>

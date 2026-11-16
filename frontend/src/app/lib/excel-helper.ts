@@ -116,7 +116,7 @@ export const printReport = (title: string, headers: string[], rows: any[][]) => 
         <div class="header">
           <div>
             <h1>${title}</h1>
-            <div style="font-size: 11px; color: #4b5563; margin-top: 4px;">Construction ERP SaaS Platform</div>
+            <div style="font-size: 11px; color: #4b5563; margin-top: 4px;">ASKSHREE MixFlow SaaS Platform</div>
           </div>
           <div class="meta-info">
             <div>Printed Date: ${new Date().toLocaleString()}</div>
