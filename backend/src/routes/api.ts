@@ -6,7 +6,7 @@ import { getDashboardStats } from '../controllers/statsController';
 import { getEmployees, createEmployee, deleteEmployee, updateEmployee } from '../controllers/employeeController';
 import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '../controllers/vehicleController';
 import { getVendors, createVendor, updateVendor, deleteVendor } from '../controllers/vendorController';
-import { getSites, createSite, updateSite, deleteSite } from '../controllers/siteController';
+import { getSites, getSiteById, createSite, updateSite, deleteSite } from '../controllers/siteController';
 import { getConsumptions, createConsumption, updateConsumption, deleteConsumption } from '../controllers/consumptionController';
 import { getAttendances, createAttendance, updateAttendance, deleteAttendance } from '../controllers/attendanceController';
 import { getMaintenances, createMaintenance, updateMaintenance, deleteMaintenance } from '../controllers/maintenanceController';
@@ -103,6 +103,7 @@ router.delete('/vendors/:id', authorize(['vendors']), deleteVendor);
 
 // Sites
 router.get('/sites', authorize(['sites', 'challans']), getSites);
+router.get('/sites/:id', authorize(['sites', 'challans']), getSiteById);
 router.post('/sites', authorize(['sites']), createSite);
 router.put('/sites/:id', authorize(['sites']), updateSite);
 router.delete('/sites/:id', authorize(['sites']), deleteSite);

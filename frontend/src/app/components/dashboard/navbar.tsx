@@ -161,10 +161,10 @@ export function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         {/* Logo */}
         <div className="flex items-center gap-2 mr-4 hidden md:flex">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 text-white">
-            <span className="font-bold">CE</span>
+            <span className="font-bold">AM</span>
           </div>
           <div>
-            <h1 className="text-sm font-semibold">Construction ERP</h1>
+            <h1 className="text-sm font-semibold"> ASKSHREE MixFlow</h1>
             <p className="text-xs text-muted-foreground">Operations Control Center</p>
           </div>
         </div>
