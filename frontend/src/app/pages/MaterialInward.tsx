@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { KPICard } from "../components/dashboard/kpi-card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
@@ -17,7 +17,9 @@ import {
   Search, 
   ArrowDownLeft,
   ChevronLeft, 
-  ChevronRight
+  ChevronRight,
+  Upload,
+  Printer
 } from "lucide-react"
 import { 
   fetchMaterialInwards, 
@@ -36,6 +38,7 @@ import {
   DialogFooter,
 } from "../components/ui/dialog"
 import { toast } from "sonner"
+import { downloadExcelTemplate, exportToCSV, parseExcelFile, parseSpreadsheetDate, printReport } from "../lib/excel-helper"
 
 export default function MaterialInward() {
   const [inwards, setInwards] = useState<any[]>([])
@@ -54,6 +57,7 @@ export default function MaterialInward() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
+  const importFileInputRef = useRef<HTMLInputElement>(null)
 
   // Form States
   const [newInward, setNewInward] = useState({
@@ -202,6 +206,127 @@ export default function MaterialInward() {
   const totalQuantityAggregate = inwards.filter(i => i.materialName === "Aggregate").reduce((sum, i) => sum + (i.quantity || 0), 0)
   const totalQuantitySand = inwards.filter(i => i.materialName === "Sand").reduce((sum, i) => sum + (i.quantity || 0), 0)
 
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(
+      ["Inward Ref", "Date & Time", "Site", "Material", "Quantity", "Unit", "Supplier", "Vehicle No.", "Challan No.", "Received By", "Unit Price", "Source Location", "Brand", "Manufacturing Location", "Remarks"],
+      "material_inward"
+    )
+  }
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    try {
+      const rows = await parseExcelFile(file)
+      if (rows.length === 0) throw new Error("The selected file has no material inward records to import.")
+
+      const siteByName = new Map(sites.map(site => [String(site.name).trim().toLowerCase(), site]))
+      const existingNumbers = new Set(inwards.map(item => String(item.inwardNumber).trim().toLowerCase()))
+      const importedNumbers = new Set<string>()
+      const validMaterials = new Map([
+        ["cement", "Cement"], ["aggregate", "Aggregate"], ["sand", "Sand"], ["ggbs", "GGBS"],
+        ["fly ash", "Fly Ash"], ["micro fine", "Micro Fine"], ["admixture", "Admixture"],
+        ["steel", "Steel"], ["rmc", "RMC"], ["bricks", "Bricks"],
+        ["sand / fine aggregate", "Sand"], ["admixture (add mix)", "Admixture"],
+        ["reinforcement steel", "Steel"], ["ready mix concrete (rmc)", "RMC"],
+      ])
+      const validUnits = new Map([
+        ["bags", "bags"], ["mt", "MT"], ["mt (metric ton)", "MT"], ["tons", "tons"], ["kg", "kg"],
+        ["cum", "cum"], ["cu.m.", "cum"], ["litres", "litres"], ["liters", "litres"], ["units", "units"],
+      ])
+
+      const records = rows.map((row, index) => {
+        const rowNumber = index + 2
+        const inwardNumber = String(row["Inward Ref"] ?? "").trim()
+        const date = parseSpreadsheetDate(row["Date & Time"])
+        const siteName = String(row.Site ?? "").trim()
+        const site = siteByName.get(siteName.toLowerCase())
+        const materialInput = String(row.Material ?? "").trim().toLowerCase()
+        const materialName = validMaterials.get(materialInput)
+        const quantity = Number(String(row.Quantity ?? "").replace(/,/g, ""))
+        const unitInput = String(row.Unit ?? "").trim().toLowerCase()
+        const unit = validUnits.get(unitInput)
+        const supplierName = String(row.Supplier ?? "").trim()
+        const unitPriceText = String(row["Unit Price"] ?? "").replace(/[₹$,\s]/g, "")
+        const unitPrice = unitPriceText ? Number(unitPriceText) : null
+
+        if (!inwardNumber) throw new Error(`Row ${rowNumber}: Inward Ref is required.`)
+        if (existingNumbers.has(inwardNumber.toLowerCase()) || importedNumbers.has(inwardNumber.toLowerCase())) {
+          throw new Error(`Row ${rowNumber}: Inward Ref "${inwardNumber}" already exists.`)
+        }
+        if (!date) throw new Error(`Row ${rowNumber}: enter a valid Date & Time.`)
+        if (!site) throw new Error(`Row ${rowNumber}: Site "${siteName}" was not found.`)
+        if (!materialName) throw new Error(`Row ${rowNumber}: enter a supported Material.`)
+        if (!Number.isFinite(quantity) || quantity <= 0) throw new Error(`Row ${rowNumber}: Quantity must be greater than zero.`)
+        if (!unit) throw new Error(`Row ${rowNumber}: enter a supported Unit.`)
+        if (!supplierName) throw new Error(`Row ${rowNumber}: Supplier is required.`)
+        if (unitPrice !== null && (!Number.isFinite(unitPrice) || unitPrice < 0)) {
+          throw new Error(`Row ${rowNumber}: enter a valid Unit Price.`)
+        }
+
+        importedNumbers.add(inwardNumber.toLowerCase())
+        return {
+          inwardNumber,
+          date: date.toISOString(),
+          siteId: site.id,
+          materialName,
+          quantity,
+          unit,
+          supplierName,
+          vehicleNumber: String(row["Vehicle No."] ?? "").trim(),
+          challanNumber: String(row["Challan No."] ?? "").trim(),
+          receivedBy: String(row["Received By"] ?? "").trim(),
+          unitPrice,
+          sourceLocation: String(row["Source Location"] ?? "").trim(),
+          brand: String(row.Brand ?? "").trim(),
+          mfgLocation: String(row["Manufacturing Location"] ?? "").trim(),
+          remarks: String(row.Remarks ?? "").trim(),
+        }
+      })
+
+      await createMaterialInward(records)
+      toast.success(`Imported ${records.length} material inward record${records.length === 1 ? "" : "s"}`)
+      await loadData()
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Please check the file format and try again.")
+    } finally {
+      e.target.value = ""
+    }
+  }
+
+  const handleExportCSV = () => {
+    exportToCSV(
+      ["Inward Ref", "Date & Time", "Site", "Material", "Quantity", "Supplier", "Vehicle No.", "Remarks"],
+      filteredInwards.map(item => [
+        item.inwardNumber,
+        item.date ? new Date(item.date).toLocaleString() : "",
+        item.site?.name || "N/A",
+        item.materialName,
+        `${item.quantity ?? 0} ${item.unit || ""}`.trim(),
+        item.supplierName,
+        item.vehicleNumber || "N/A",
+        item.remarks || "",
+      ]),
+      "material_inward"
+    )
+  }
+
+  const handlePrintReport = () => printReport(
+    "Material Inward Register",
+    ["Inward Ref", "Date & Time", "Site", "Material", "Quantity", "Supplier", "Vehicle No.", "Remarks"],
+    filteredInwards.map(item => [
+      item.inwardNumber,
+      item.date ? new Date(item.date).toLocaleString() : "",
+      item.site?.name || "N/A",
+      item.materialName,
+      `${item.quantity ?? 0} ${item.unit || ""}`.trim(),
+      item.supplierName,
+      item.vehicleNumber || "N/A",
+      item.remarks || "",
+    ])
+  )
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -210,9 +335,22 @@ export default function MaterialInward() {
           <p className="text-sm text-muted-foreground font-medium">Record and track materials received at different project sites</p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" className="text-xs h-9" onClick={handlePrintReport}>
+            <Printer className="h-4 w-4 mr-2" />Print
+          </Button>
           <Button variant="outline" className="text-xs h-9" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button variant="outline" className="text-xs h-9" onClick={handleDownloadTemplate}>
+            <Download className="h-4 w-4 mr-2" />Template
+          </Button>
+          <Button variant="outline" className="text-xs h-9" onClick={() => importFileInputRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-2" />Import CSV
+          </Button>
+          <input ref={importFileInputRef} type="file" className="hidden" accept=".csv,.xlsx,.xls" onChange={handleImportFile} />
+          <Button variant="outline" className="text-xs h-9" onClick={handleExportCSV}>
+            <Download className="h-4 w-4 mr-2" />Export CSV
           </Button>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>

@@ -11,6 +11,20 @@ export const exportToExcel = (data: any[], fileName: string, sheetName = 'Sheet1
 };
 
 /**
+ * Exports tabular data to a UTF-8 CSV file that opens cleanly in Excel.
+ */
+export const exportToCSV = (headers: string[], rows: any[][], fileName: string) => {
+  const escapeCell = (value: any) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+  const csv = [headers, ...rows].map(row => row.map(escapeCell).join(',')).join('\r\n');
+  const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${fileName}.csv`;
+  link.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+/**
  * Downloads a spreadsheet import template with designated column headers.
  */
 export const downloadExcelTemplate = (headers: string[], fileName: string) => {
@@ -42,6 +56,17 @@ export const parseExcelFile = (file: File): Promise<any[]> => {
     reader.onerror = () => reject(new Error('Failed to read file.'));
     reader.readAsArrayBuffer(file);
   });
+};
+
+/** Converts an Excel serial date or date string into a Date, returning null when invalid. */
+export const parseSpreadsheetDate = (value: any): Date | null => {
+  if (value === undefined || value === null || value === '') return null;
+  const date = value instanceof Date
+    ? value
+    : typeof value === 'number'
+      ? new Date(Date.UTC(1899, 11, 30) + Math.round(value * 86400000))
+      : new Date(String(value).trim());
+  return Number.isNaN(date.getTime()) ? null : date;
 };
 
 /**

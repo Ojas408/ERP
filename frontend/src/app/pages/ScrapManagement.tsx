@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { KPICard } from "../components/dashboard/kpi-card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table"
@@ -17,8 +17,11 @@ import {
   ChevronLeft, 
   ChevronRight,
   TrendingUp,
-  DollarSign
-, Printer} from "lucide-react"
+  DollarSign,
+  Download,
+  Upload,
+  Printer
+} from "lucide-react"
 import { 
   fetchScraps, 
   createScrap, 
@@ -37,7 +40,7 @@ import {
 } from "../components/ui/dialog"
 import { toast } from "sonner"
 
-import { printReport } from "../lib/excel-helper"
+import { downloadExcelTemplate, exportToCSV, parseExcelFile, parseSpreadsheetDate, printReport } from "../lib/excel-helper"
 
 export default function ScrapManagement() {
   const [scraps, setScraps] = useState<any[]>([])
@@ -56,6 +59,7 @@ export default function ScrapManagement() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
+  const importFileInputRef = useRef<HTMLInputElement>(null)
 
   // Form States
   const [newScrap, setNewScrap] = useState({
@@ -185,7 +189,119 @@ export default function ScrapManagement() {
   const scrapSalesRevenue = scraps.filter(s => s.saleStatus === "sold").reduce((sum, s) => sum + (s.saleValue || 0), 0)
   const storedScrapCount = scraps.filter(s => s.saleStatus === "stored").length
 
-  const handlePrintReport = () => printReport('Scrap Management', ['Date', 'Material', 'Quantity', 'Unit', 'Sale Status', 'Sale Value'], scraps.map((v: any) => [v.date, v.materialType, v.quantity, v.unit, v.saleStatus, v.saleValue]))
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(
+      ["Date", "Source Site", "Scrap Type", "Quantity", "Unit", "Status", "Sales Value", "Buyer Name", "Remarks"],
+      "scrap_management"
+    )
+  }
+
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    let importedCount = 0
+    try {
+      const rows = await parseExcelFile(file)
+      if (rows.length === 0) throw new Error("The selected file has no scrap records to import.")
+
+      const siteByName = new Map(sites.map(site => [String(site.name).trim().toLowerCase(), site]))
+      const validUnits = new Map([
+        ["tons", "tons"], ["kg", "kg"], ["units", "units"], ["units / bags count", "units"],
+      ])
+      const validStatuses = new Set(["stored", "sold", "disposed"])
+      const records = rows.map((row, index) => {
+        const rowNumber = index + 2
+        const date = parseSpreadsheetDate(row.Date)
+        const siteName = String(row["Source Site"] ?? "").trim()
+        const site = siteByName.get(siteName.toLowerCase())
+        const materialType = String(row["Scrap Type"] ?? "").trim()
+        const quantity = Number(String(row.Quantity ?? "").replace(/,/g, ""))
+        const unit = validUnits.get(String(row.Unit ?? "").trim().toLowerCase())
+        const statusInput = String(row.Status ?? "").trim().toLowerCase()
+        const saleStatus = ({
+          "stored in yard": "stored",
+          "sold to vendor": "sold",
+          "disposed / dumped": "disposed",
+          "disposed/dumped": "disposed",
+        } as Record<string, string>)[statusInput] || statusInput
+        const saleValueText = String(row["Sales Value"] ?? "").replace(/[₹$,\s]/g, "")
+        const saleValue = saleValueText ? Number(saleValueText) : null
+        const buyerName = String(row["Buyer Name"] ?? "").trim()
+
+        if (!date) throw new Error(`Row ${rowNumber}: enter a valid Date.`)
+        if (!site) throw new Error(`Row ${rowNumber}: Source Site "${siteName}" was not found.`)
+        if (!materialType) throw new Error(`Row ${rowNumber}: Scrap Type is required.`)
+        if (!Number.isFinite(quantity) || quantity <= 0) throw new Error(`Row ${rowNumber}: Quantity must be greater than zero.`)
+        if (!unit) throw new Error(`Row ${rowNumber}: Unit must be tons, kg, or units.`)
+        if (!validStatuses.has(saleStatus)) throw new Error(`Row ${rowNumber}: Status must be stored, sold, or disposed.`)
+        if (saleValue !== null && (!Number.isFinite(saleValue) || saleValue < 0)) {
+          throw new Error(`Row ${rowNumber}: enter a valid Sales Value.`)
+        }
+        if (saleStatus === "sold" && (!buyerName || saleValue === null)) {
+          throw new Error(`Row ${rowNumber}: sold scrap needs a Sales Value and Buyer Name.`)
+        }
+
+        return {
+          date: date.toISOString(),
+          siteId: site.id,
+          materialType,
+          quantity,
+          unit,
+          saleStatus,
+          saleValue,
+          buyerName,
+          remarks: String(row.Remarks ?? "").trim(),
+        }
+      })
+
+      for (const record of records) {
+        await createScrap(record)
+        importedCount += 1
+      }
+      await loadData()
+      toast.success(`Imported ${importedCount} scrap record${importedCount === 1 ? "" : "s"}`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Please check the file format and try again."
+      toast.error(importedCount > 0
+        ? `Import stopped after ${importedCount} record${importedCount === 1 ? "" : "s"}. ${message}`
+        : message)
+    } finally {
+      e.target.value = ""
+    }
+  }
+
+  const handleExportCSV = () => {
+    exportToCSV(
+      ["Date", "Source Site", "Scrap Type", "Quantity", "Status", "Sales Value", "Buyer Name", "Remarks"],
+      filteredScraps.map(item => [
+        item.date ? new Date(item.date).toLocaleDateString() : "",
+        item.site?.name || "N/A",
+        item.materialType,
+        `${item.quantity ?? 0} ${item.unit || ""}`.trim(),
+        item.saleStatus,
+        item.saleValue ?? "",
+        item.buyerName || "",
+        item.remarks || "",
+      ]),
+      "scrap_management"
+    )
+  }
+
+  const handlePrintReport = () => printReport(
+    'Scrap Management',
+    ['Date', 'Source Site', 'Scrap Type', 'Quantity', 'Status', 'Sales Value', 'Buyer Name', 'Remarks'],
+    filteredScraps.map(item => [
+      item.date ? new Date(item.date).toLocaleDateString() : "",
+      item.site?.name || "N/A",
+      item.materialType,
+      `${item.quantity ?? 0} ${item.unit || ""}`.trim(),
+      item.saleStatus,
+      item.saleValue ?? "",
+      item.buyerName || "",
+      item.remarks || "",
+    ])
+  )
 
   return (
     <div className="space-y-6">
@@ -199,6 +315,16 @@ export default function ScrapManagement() {
           <Button variant="outline" className="text-xs h-9" onClick={loadData}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button variant="outline" className="text-xs h-9" onClick={handleDownloadTemplate}>
+            <Download className="h-4 w-4 mr-2" />Template
+          </Button>
+          <Button variant="outline" className="text-xs h-9" onClick={() => importFileInputRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-2" />Import CSV
+          </Button>
+          <input ref={importFileInputRef} type="file" className="hidden" accept=".csv,.xlsx,.xls" onChange={handleImportFile} />
+          <Button variant="outline" className="text-xs h-9" onClick={handleExportCSV}>
+            <Download className="h-4 w-4 mr-2" />Export CSV
           </Button>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>

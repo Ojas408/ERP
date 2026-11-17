@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { KPICard } from "../components/dashboard/kpi-card"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
@@ -13,7 +13,7 @@ import { Textarea } from "../components/ui/textarea"
 import { ShoppingCart, Upload, Download, Eye, CheckCircle, XCircle, RefreshCw, Plus, Edit, Trash2 , Printer} from "lucide-react"
 import { fetchPurchaseOrders, createPurchaseOrder, fetchVendors, deleteRecord, updateRecord } from "../services/api"
 
-import { printReport } from "../lib/excel-helper"
+import { downloadExcelTemplate, parseExcelFile, printReport } from "../lib/excel-helper"
 
 export default function PurchaseOrder() {
   const [purchaseOrders, setPurchaseOrders] = useState<any[]>([])
@@ -22,6 +22,7 @@ export default function PurchaseOrder() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [editingItem, setEditingItem] = useState<any>(null)
+  const csvFileInputRef = useRef<HTMLInputElement>(null)
   
   const [newPO, setNewPO] = useState({
     orderNumber: `PO-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -127,6 +128,82 @@ export default function PurchaseOrder() {
 
   const handlePrintReport = () => printReport('Purchase Orders', ['Order Number', 'Material', 'Quantity', 'Total Amount', 'Status'], purchaseOrders.map((v: any) => [v.orderNumber, v.material, v.quantity, v.totalAmount, v.status]))
 
+  const handleDownloadTemplate = () => {
+    downloadExcelTemplate(
+      ["PO Number", "Date", "Vendor", "Amount", "Items", "Status", "Actions"],
+      "purchase_orders"
+    )
+  }
+
+  const handleImportCSV = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    let importedCount = 0
+    try {
+      const rows = await parseExcelFile(file)
+      if (rows.length === 0) throw new Error("The selected file has no purchase orders to import.")
+
+      const vendorByName = new Map(vendors.map(vendor => [String(vendor.name).trim().toLowerCase(), vendor]))
+      const existingOrderNumbers = new Set(safePOs.map(po => String(po.orderNumber).trim().toLowerCase()))
+      const importedOrderNumbers = new Set<string>()
+      const validStatuses = new Set(["pending", "approved", "received", "rejected"])
+
+      const orders = rows.map((row, index) => {
+        const rowNumber = index + 2
+        const orderNumber = String(row["PO Number"] ?? "").trim()
+        const vendorName = String(row.Vendor ?? "").trim()
+        const vendor = vendorByName.get(vendorName.toLowerCase())
+        const amountText = String(row.Amount ?? "").replace(/[₹$,\s]/g, "")
+        const totalAmount = Number(amountText)
+        const status = String(row.Status ?? "").trim().toLowerCase()
+        const dateValue = row.Date
+        const date = typeof dateValue === "number"
+          ? new Date(Date.UTC(1899, 11, 30) + Math.round(dateValue * 86400000))
+          : dateValue instanceof Date
+            ? dateValue
+            : new Date(String(dateValue ?? "").trim())
+
+        if (!orderNumber) throw new Error(`Row ${rowNumber}: PO Number is required.`)
+        if (existingOrderNumbers.has(orderNumber.toLowerCase()) || importedOrderNumbers.has(orderNumber.toLowerCase())) {
+          throw new Error(`Row ${rowNumber}: PO Number "${orderNumber}" already exists.`)
+        }
+        if (!dateValue || Number.isNaN(date.getTime())) throw new Error(`Row ${rowNumber}: enter a valid Date.`)
+        if (!vendor) throw new Error(`Row ${rowNumber}: Vendor "${vendorName}" was not found.`)
+        if (!amountText || !Number.isFinite(totalAmount) || totalAmount < 0) {
+          throw new Error(`Row ${rowNumber}: enter a valid Amount.`)
+        }
+        if (!validStatuses.has(status)) {
+          throw new Error(`Row ${rowNumber}: Status must be pending, approved, received, or rejected.`)
+        }
+
+        importedOrderNumbers.add(orderNumber.toLowerCase())
+        return {
+          orderNumber,
+          date: date.toISOString(),
+          vendorId: vendor.id,
+          totalAmount,
+          items: String(row.Items ?? "").trim(),
+          status,
+        }
+      })
+
+      for (const order of orders) {
+        await createPurchaseOrder(order)
+        importedCount += 1
+      }
+      await loadData()
+      window.alert(`Imported ${importedCount} purchase order${importedCount === 1 ? "" : "s"}.`)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Please check the file format and try again."
+      window.alert(importedCount > 0
+        ? `Import stopped after ${importedCount} purchase order${importedCount === 1 ? "" : "s"}. ${message}`
+        : message)
+    } finally {
+      e.target.value = ""
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -140,7 +217,20 @@ export default function PurchaseOrder() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
+          <Button variant="outline" className="text-xs h-9" onClick={handleDownloadTemplate}>
+            <Download className="h-4 w-4 mr-2" />Template
+          </Button>
+          <Button variant="outline" className="text-xs h-9" onClick={() => csvFileInputRef.current?.click()}>
+            <Upload className="h-4 w-4 mr-2" />Import CSV
+          </Button>
           <Button variant="outline" className="text-xs h-9"><Download className="h-4 w-4 mr-2" />Export CSV</Button>
+          <input
+            ref={csvFileInputRef}
+            type="file"
+            className="hidden"
+            accept=".csv,.xlsx,.xls"
+            onChange={handleImportCSV}
+          />
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
               <Button className="text-xs h-9"><ShoppingCart className="h-4 w-4 mr-2" />Create PO</Button>
