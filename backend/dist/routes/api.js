@@ -22,6 +22,7 @@ const materialInwardController_1 = require("../controllers/materialInwardControl
 const rmcGradeController_1 = require("../controllers/rmcGradeController");
 const scrapController_1 = require("../controllers/scrapController");
 const overheadController_1 = require("../controllers/overheadController");
+const bomController_1 = require("../controllers/bomController");
 const reportController_1 = require("../controllers/reportController");
 const auth_1 = require("../middleware/auth");
 const rbac_1 = require("../middleware/rbac");
@@ -80,6 +81,7 @@ router.put('/vendors/:id', (0, rbac_1.authorize)(['vendors']), vendorController_
 router.delete('/vendors/:id', (0, rbac_1.authorize)(['vendors']), vendorController_1.deleteVendor);
 // Sites
 router.get('/sites', (0, rbac_1.authorize)(['sites', 'challans']), siteController_1.getSites);
+router.get('/sites/:id', (0, rbac_1.authorize)(['sites', 'challans']), siteController_1.getSiteById);
 router.post('/sites', (0, rbac_1.authorize)(['sites']), siteController_1.createSite);
 router.put('/sites/:id', (0, rbac_1.authorize)(['sites']), siteController_1.updateSite);
 router.delete('/sites/:id', (0, rbac_1.authorize)(['sites']), siteController_1.deleteSite);
@@ -129,11 +131,21 @@ router.post('/scrap', (0, rbac_1.authorize)(['scrap']), scrapController_1.create
 router.put('/scrap/:id', (0, rbac_1.authorize)(['scrap']), scrapController_1.updateScrap);
 router.delete('/scrap/:id', (0, rbac_1.authorize)(['scrap']), scrapController_1.deleteScrap);
 // Overhead Report
-router.get('/overhead', (0, rbac_1.authorize)(['overhead-report', 'reports/accounts']), overheadController_1.getOverheadEntries);
-router.get('/overhead/summary', (0, rbac_1.authorize)(['overhead-report', 'reports/accounts']), overheadController_1.getOverheadSummary);
+router.get('/overhead', (0, rbac_1.authorize)(['overhead-report', 'reports/accounts', 'overhead']), overheadController_1.getOverheadEntries);
+router.get('/overhead/summary', (0, rbac_1.authorize)(['overhead-report', 'reports/accounts', 'overhead']), overheadController_1.getOverheadSummary);
 router.post('/overhead', (0, rbac_1.authorize)(['overhead-report']), overheadController_1.createOverheadEntry);
 router.put('/overhead/:id', (0, rbac_1.authorize)(['overhead-report']), overheadController_1.updateOverheadEntry);
 router.delete('/overhead/:id', (0, rbac_1.authorize)(['overhead-report']), overheadController_1.deleteOverheadEntry);
+// Bill of Materials (BOM)
+router.get('/bom', (0, rbac_1.authorize)(['bom', 'all', 'admin', 'accounts', 'purchase', 'site engineer', 'manager']), bomController_1.getBOMs);
+router.get('/bom/comparison', (0, rbac_1.authorize)(['bom', 'all', 'admin', 'accounts', 'purchase', 'site engineer', 'manager', 'overhead-report']), bomController_1.getBOMVsActualComparison);
+router.get('/bom/:id', (0, rbac_1.authorize)(['bom', 'all', 'admin', 'accounts', 'purchase', 'site engineer', 'manager']), bomController_1.getBOMById);
+router.post('/bom', (0, rbac_1.authorize)(['bom', 'all', 'admin', 'purchase', 'site engineer']), bomController_1.createBOM);
+router.put('/bom/:id', (0, rbac_1.authorize)(['bom', 'all', 'admin', 'purchase', 'site engineer']), bomController_1.updateBOM);
+router.post('/bom/:id/revision', (0, rbac_1.authorize)(['bom', 'all', 'admin', 'purchase', 'site engineer']), bomController_1.createBOMRevision);
+router.post('/bom/:id/submit', (0, rbac_1.authorize)(['bom', 'all', 'admin', 'purchase', 'site engineer']), bomController_1.submitBOMForApproval);
+router.post('/bom/:id/approve', (0, rbac_1.authorize)(['bom', 'all', 'admin', 'manager']), bomController_1.approveBOM);
+router.delete('/bom/:id', (0, rbac_1.authorize)(['bom', 'all', 'admin']), bomController_1.deleteBOM);
 // Custom Columns
 router.get('/custom-columns', (0, rbac_1.authorize)(['all']), customColumnController_1.getCustomColumns);
 router.post('/custom-columns', (0, rbac_1.authorize)(['all', 'admin']), customColumnController_1.createCustomColumn);

@@ -24,6 +24,7 @@ import {
   Trash2,
   Recycle,
   Database,
+  Layers,
 } from "lucide-react"
 import { cn } from "../../../lib/utils"
 import { Button } from "../ui/button"
@@ -38,6 +39,7 @@ const menuItems = [
   { icon: Factory, label: "Production Report", id: "production" },
   { icon: Fuel, label: "Consumption Report", id: "consumption" },
   { icon: Database, label: "Grade of RMC", id: "rmc-grade" },
+  { icon: Layers, label: "Bill of Materials (BOM)", id: "bom" },
   { icon: Users, label: "Man Work Hour Report", id: "work-hour" },
   { icon: Wrench, label: "Maintenance Report", id: "maintenance" },
   { icon: DollarSign, label: "Expense Report", id: "expense" },
@@ -69,10 +71,10 @@ const rolePermissions: Record<UserRole, string[]> = {
   "Super Admin": allModules,
   "Admin": allModules.filter(m => m !== "settings"),
   "HR": ["dashboard", "workers", "employee", "work-hour"],
-  "Accounts": ["dashboard", "projects", "workers", "equipment", "expense", "purchase-order", "vendor", "challan", "overhead-report", "material-inward", "scrap-management"],
-  "Purchase": ["dashboard", "projects", "equipment", "vendor", "purchase-order", "inventory", "challan", "material-inward", "scrap-management", "rmc-grade"],
-  "Site Engineer": ["dashboard", "projects", "workers", "equipment", "production", "consumption", "site", "inventory", "challan", "vehicle-io", "maintenance", "material-inward", "scrap-management", "rmc-grade"],
-  "Manager": ["dashboard", "projects", "workers", "equipment", "efficiency", "target", "time-motion", "production", "expense", "overhead-report"],
+  "Accounts": ["dashboard", "projects", "workers", "equipment", "expense", "purchase-order", "vendor", "challan", "overhead-report", "material-inward", "scrap-management", "bom"],
+  "Purchase": ["dashboard", "projects", "equipment", "vendor", "purchase-order", "inventory", "challan", "material-inward", "scrap-management", "rmc-grade", "bom"],
+  "Site Engineer": ["dashboard", "projects", "workers", "equipment", "production", "consumption", "site", "inventory", "challan", "vehicle-io", "maintenance", "material-inward", "scrap-management", "rmc-grade", "bom"],
+  "Manager": ["dashboard", "projects", "workers", "equipment", "efficiency", "target", "time-motion", "production", "expense", "overhead-report", "bom"],
   "Viewer": ["dashboard", "projects", "production", "efficiency"]
 }
 

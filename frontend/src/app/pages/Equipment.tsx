@@ -113,6 +113,7 @@ export default function Equipment() {
     vehicleType: "",
     driver: "",
     siteId: "",
+    rentalAmount: "",
     status: "available",
     lastService: new Date().toISOString().split('T')[0]
   })
@@ -321,6 +322,7 @@ export default function Equipment() {
         vehicleType: newVehicle.vehicleType || undefined,
         driver: newVehicle.driver || undefined,
         siteId: newVehicle.siteId || undefined,
+        rentalAmount: parseFloat(newVehicle.rentalAmount) || 0,
         status: newVehicle.status,
         lastService: newVehicle.lastService ? new Date(newVehicle.lastService).toISOString() : undefined
       })
@@ -332,6 +334,7 @@ export default function Equipment() {
         vehicleType: vehicleTypes[0]?.name || "",
         driver: "",
         siteId: sites[0]?.id || "",
+        rentalAmount: "",
         status: "available",
         lastService: new Date().toISOString().split('T')[0]
       })
@@ -342,8 +345,10 @@ export default function Equipment() {
   }
 
   const handleEdit = (vehicle: any) => {
+    const isRented = (vehicle.vehicleType || '').toLowerCase().includes('rental') || (vehicle.model || '').toLowerCase().includes('rental');
     setEditingItem({
       ...vehicle,
+      rentalAmount: vehicle.rentalAmount != null ? String(vehicle.rentalAmount) : (isRented ? "45000" : "0"),
       lastService: vehicle.lastService ? new Date(vehicle.lastService).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       siteId: vehicle.siteId || ""
     })
@@ -367,6 +372,7 @@ export default function Equipment() {
         vehicleType: editingItem.vehicleType,
         driver: editingItem.driver,
         siteId: editingItem.siteId || undefined,
+        rentalAmount: parseFloat(editingItem.rentalAmount) || 0,
         status: editingItem.status,
         lastService: new Date(editingItem.lastService).toISOString()
       })
@@ -393,7 +399,7 @@ export default function Equipment() {
   // Excel handlers
   const handleDownloadTemplate = () => {
     downloadExcelTemplate(
-      ["plateNumber", "model", "vehicleType", "driver", "status", "lastService"],
+      ["plateNumber", "model", "vehicleType", "driver", "rentalAmount", "status", "lastService"],
       "equipment_import_template"
     )
   }
@@ -432,7 +438,16 @@ export default function Equipment() {
   }
 
   const handleExportExcel = () => {
-    exportToExcel(vehicles, "heavy_assets_ledger")
+    const exportData = vehicles.map(v => {
+      const isRented = (v.vehicleType || '').toLowerCase().includes('rental') || (v.model || '').toLowerCase().includes('rental');
+      const rentalAmount = v.rentalAmount || (isRented ? 45000 : 0);
+      return {
+        ...v,
+        rentalAmount: rentalAmount > 0 ? rentalAmount : 0,
+        ownership: isRented ? "Rented / Hired" : "Owned"
+      };
+    });
+    exportToExcel(exportData, "heavy_assets_ledger")
   }
 
   const handlePrint = () => {
@@ -549,6 +564,16 @@ export default function Equipment() {
                     </Select>
                   </div>
                   <div className="space-y-1">
+                    <Label htmlFor="rentalAmount">Rental Amount (₹ / month)</Label>
+                    <Input 
+                      id="rentalAmount" 
+                      type="number" 
+                      placeholder="e.g. 45000 (0 if Owned)" 
+                      value={newVehicle.rentalAmount} 
+                      onChange={e => setNewVehicle({...newVehicle, rentalAmount: e.target.value})} 
+                    />
+                  </div>
+                  <div className="space-y-1">
                     <Label htmlFor="lastService">Last Serviced Date</Label>
                     <Input id="lastService" type="date" value={newVehicle.lastService} onChange={e => setNewVehicle({...newVehicle, lastService: e.target.value})} />
                   </div>
@@ -630,6 +655,7 @@ export default function Equipment() {
                   <TableHead className="font-bold text-slate-700 dark:text-slate-200">Assigned Driver</TableHead>
                   <TableHead className="font-bold text-slate-700 dark:text-slate-200">Current Project Site</TableHead>
                   <TableHead className="font-bold text-slate-700 dark:text-slate-200">Last Serviced</TableHead>
+                  <TableHead className="font-bold text-slate-700 dark:text-slate-200 text-right">Rental Amount</TableHead>
                   <TableHead className="font-bold text-slate-700 dark:text-slate-200">Status</TableHead>
                   <TableHead className="w-48 text-right font-bold text-slate-700 dark:text-slate-200 print:hidden">Rosters & Actions</TableHead>
                 </TableRow>
@@ -637,19 +663,21 @@ export default function Equipment() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground text-xs">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground text-xs">
                       Loading heavy equipment registry...
                     </TableCell>
                   </TableRow>
                 ) : paginatedVehicles.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground text-xs">
+                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground text-xs">
                       No assets found matching filters. Import Excel list to populate roster.
                     </TableCell>
                   </TableRow>
                 ) : (
                   paginatedVehicles.map((v) => {
-                    const lastServiced = v.lastService ? new Date(v.lastService).toLocaleDateString() : 'N/A';
+                    const rentalAmount = v.rentalAmount != null ? Number(v.rentalAmount) : 0;
+                    const isRented = rentalAmount > 0 || (v.vehicleType || '').toLowerCase().includes('rental') || (v.model || '').toLowerCase().includes('rental');
+                    const effectiveRental = rentalAmount > 0 ? rentalAmount : (isRented ? 45000 : 0);
                     return (
                       <TableRow key={v.id}>
                         <TableCell className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">{v.plateNumber}</TableCell>
@@ -657,7 +685,17 @@ export default function Equipment() {
                         <TableCell className="text-xs">{v.vehicleType || "Unassigned"}</TableCell>
                         <TableCell className="text-xs font-medium">{v.driver || "No Operator Assigned"}</TableCell>
                         <TableCell className="text-xs">{v.site?.name || "Yard / Idle"}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">{lastServiced}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{v.lastService ? new Date(v.lastService).toLocaleDateString('en-GB') : 'N/A'}</TableCell>
+                        <TableCell className="text-xs text-right font-mono font-medium">
+                          {effectiveRental > 0 ? (
+                            <span className="text-purple-700 dark:text-purple-400 font-semibold">
+                              ₹{Number(effectiveRental).toLocaleString('en-IN')}
+                              <span className="text-[10px] text-muted-foreground font-normal ml-0.5">/mo</span>
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground text-[11px]">Owned (₹0)</span>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Badge variant={v.status === "available" ? "secondary" : v.status === "in-use" || v.status === "active" ? "default" : "destructive"} className="text-[10px] h-5 uppercase">
                             {v.status}
@@ -771,6 +809,15 @@ export default function Equipment() {
                       <SelectItem value="maintenance">Breakdown / Maint</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Rental Amount (₹ / month)</Label>
+                  <Input 
+                    type="number" 
+                    placeholder="e.g. 45000 (0 if Owned)" 
+                    value={editingItem.rentalAmount ?? ""} 
+                    onChange={e => setEditingItem({...editingItem, rentalAmount: e.target.value})} 
+                  />
                 </div>
                 <div className="space-y-1">
                   <Label>Last Serviced</Label>

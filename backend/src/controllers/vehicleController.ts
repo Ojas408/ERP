@@ -31,6 +31,7 @@ export const createVehicle = async (req: AuthRequest, res: Response) => {
             status: item.status || 'available',
             vehicleType: item.vehicleType || undefined,
             driver: item.driver || undefined,
+            rentalAmount: item.rentalAmount != null ? parseFloat(item.rentalAmount) || 0 : 0,
             siteId: item.siteId || undefined,
             lastService: item.lastService ? new Date(item.lastService) : undefined,
           }
@@ -47,6 +48,7 @@ export const createVehicle = async (req: AuthRequest, res: Response) => {
           status: data.status || 'available',
           vehicleType: data.vehicleType || undefined,
           driver: data.driver || undefined,
+          rentalAmount: data.rentalAmount != null ? parseFloat(data.rentalAmount) || 0 : 0,
           siteId: data.siteId || undefined,
           lastService: data.lastService ? new Date(data.lastService) : undefined,
         },
@@ -64,7 +66,7 @@ export const updateVehicle = async (req: AuthRequest, res: Response) => {
   const tenantId = req.user!.tenantId;
   const { userId, email } = req.user!;
   const id = req.params.id as string;
-  const { plateNumber, model, status, lastService, vehicleType, driver, siteId } = req.body;
+  const { plateNumber, model, status, lastService, vehicleType, driver, rentalAmount, siteId } = req.body;
   try {
     await prisma.vehicle.updateMany({
       where: { id, tenantId },
@@ -74,6 +76,7 @@ export const updateVehicle = async (req: AuthRequest, res: Response) => {
         status,
         vehicleType,
         driver,
+        rentalAmount: rentalAmount !== undefined ? (parseFloat(rentalAmount) || 0) : undefined,
         siteId: siteId || null,
         lastService: lastService ? new Date(lastService) : undefined,
       },

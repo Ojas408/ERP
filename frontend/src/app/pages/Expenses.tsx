@@ -22,14 +22,17 @@ import {
   ChevronRight,
   FileSpreadsheet,
   CheckCircle,
-  Clock
+  Clock,
+  Zap,
+  MapPin
 } from "lucide-react"
 import { 
   fetchExpenses, 
   createExpense, 
   deleteRecord, 
   updateRecord,
-  fetchRecords
+  fetchRecords,
+  fetchSites
 } from "../services/api"
 import {
   Dialog,
@@ -50,6 +53,7 @@ import { toast } from "sonner"
 export default function Expenses() {
   const [expenses, setExpenses] = useState<any[]>([])
   const [categories, setCategories] = useState<any[]>([])
+  const [sites, setSites] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   
   // Search & Filters
@@ -72,7 +76,9 @@ export default function Expenses() {
     category: "",
     amount: "",
     description: "",
-    paymentStatus: "pending" // pending, approved, paid
+    paymentStatus: "paid",
+    siteId: "",
+    invoiceNumber: "",
   })
 
   // SheetJS Import Preview States
@@ -86,12 +92,14 @@ export default function Expenses() {
   const loadData = async () => {
     try {
       setLoading(true)
-      const [expenseData, catData] = await Promise.all([
+      const [expenseData, catData, siteData] = await Promise.all([
         fetchExpenses(),
-        fetchRecords("masters/expense-categories")
+        fetchRecords("masters/expense-categories"),
+        fetchSites()
       ])
       setExpenses(Array.isArray(expenseData) ? expenseData : [])
       setCategories(Array.isArray(catData) ? catData : [])
+      setSites(Array.isArray(siteData) ? siteData : [])
 
       if (catData && catData.length > 0) {
         setNewExpense(prev => ({ ...prev, category: catData[0].name }))
@@ -110,16 +118,19 @@ export default function Expenses() {
     try {
       await createExpense({
         ...newExpense,
-        amount: parseFloat(newExpense.amount) || 0
+        amount: parseFloat(newExpense.amount) || 0,
+        siteId: newExpense.siteId && newExpense.siteId !== 'all' ? newExpense.siteId : null,
       })
       toast.success("Expense transaction logged successfully")
       setIsAddOpen(false)
       setNewExpense({
         date: new Date().toISOString().split('T')[0],
-        category: categories[0]?.name || "Fuel",
+        category: categories[0]?.name || "Electricity & Power",
         amount: "",
         description: "",
-        paymentStatus: "pending"
+        paymentStatus: "paid",
+        siteId: "",
+        invoiceNumber: "",
       })
       loadData()
     } catch (error) {
@@ -340,9 +351,26 @@ export default function Expenses() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="site">Batching Plant / Site</Label>
+                    <Select value={newExpense.siteId || "all"} onValueChange={v => setNewExpense({...newExpense, siteId: v})}>
+                      <SelectTrigger id="site"><SelectValue placeholder="All Plants / Central" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Plants / Central</SelectItem>
+                        {sites.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label htmlFor="invoice">Bill / Meter / Voucher No.</Label>
+                    <Input id="invoice" placeholder="e.g. UPPCL-60921" value={newExpense.invoiceNumber} onChange={e => setNewExpense({...newExpense, invoiceNumber: e.target.value})} />
+                  </div>
+
                   <div className="space-y-1">
                     <Label htmlFor="amount">Voucher Amount (₹) *</Label>
-                    <Input id="amount" type="number" placeholder="5000" value={newExpense.amount} onChange={e => setNewExpense({...newExpense, amount: e.target.value})} required />
+                    <Input id="amount" type="number" step="any" placeholder="5000" value={newExpense.amount} onChange={e => setNewExpense({...newExpense, amount: e.target.value})} required />
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="status">Voucher Payment Status</Label>
@@ -355,9 +383,17 @@ export default function Expenses() {
                       </SelectContent>
                     </Select>
                   </div>
+
+                  {(newExpense.category.toLowerCase().includes('electric') || newExpense.category.toLowerCase().includes('power')) && (
+                    <div className="col-span-2 text-[11px] p-2.5 bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 rounded border border-amber-200 dark:border-amber-900/50 flex items-center gap-2 font-medium">
+                      <Zap className="h-4 w-4 fill-amber-500 text-amber-500 shrink-0" />
+                      <span>Electricity bills recorded here automatically feed into the <strong>Total Overhead Report</strong> and <strong>Plant Power Reconciliation</strong>. You can include kWh units in description (e.g. 26737 kWh) to track power efficiency.</span>
+                    </div>
+                  )}
+
                   <div className="space-y-1 col-span-2">
                     <Label htmlFor="description">Voucher Description *</Label>
-                    <Input id="description" placeholder="e.g. Site generator fuel purchase slip no. 129" value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} required />
+                    <Input id="description" placeholder="e.g. Plant electricity bill - 26,737 kWh units consumed" value={newExpense.description} onChange={e => setNewExpense({...newExpense, description: e.target.value})} required />
                   </div>
                 </div>
                 <DialogFooter className="pt-2">
@@ -487,8 +523,23 @@ export default function Expenses() {
                   paginatedExpenses.map((expense) => (
                     <TableRow key={expense.id}>
                       <TableCell className="text-xs">{new Date(expense.date).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-xs font-semibold">{expense.category}</TableCell>
-                      <TableCell className="text-xs font-medium max-w-sm truncate text-slate-700 dark:text-slate-300" title={expense.description}>{expense.description}</TableCell>
+                      <TableCell className="text-xs font-semibold">
+                        <div className="flex flex-col">
+                          <span>{expense.category}</span>
+                          {expense.site?.name && (
+                            <span className="text-[10px] text-muted-foreground font-normal flex items-center gap-0.5">
+                              <MapPin className="h-2.5 w-2.5 text-blue-500" />
+                              {expense.site.name}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-xs font-medium max-w-sm text-slate-700 dark:text-slate-300">
+                        <div className="truncate" title={expense.description}>{expense.description}</div>
+                        {expense.invoiceNumber && (
+                          <span className="text-[10px] text-muted-foreground font-mono">Bill/Meter: {expense.invoiceNumber}</span>
+                        )}
+                      </TableCell>
                       <TableCell className="text-xs font-bold text-slate-900">₹{(expense.amount || 0).toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge 

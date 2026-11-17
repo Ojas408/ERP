@@ -46,6 +46,9 @@ model Tenant {
   scraps             Scrap[]
   overheadEntries    OverheadEntry[]
   customColumns      CustomColumn[]
+  billOfMaterials    BillOfMaterial[]
+  bomItems           BOMItem[]
+  bomRevisions       BOMRevision[]
   customData         Json?
 }
 
@@ -99,16 +102,23 @@ model Inventory {
 }
 
 model Expense {
-  id            String   @id @default(uuid())
-  date          DateTime @default(now())
-  category      String
-  amount        Float
-  description   String?
-  paymentStatus String   @default("paid") // paid, pending
-  tenantId      String
-  tenant        Tenant   @relation(fields: [tenantId], references: [id])
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id               String   @id @default(uuid())
+  date             DateTime @default(now())
+  category         String
+  amount           Float
+  description      String?
+  paymentStatus    String   @default("paid") // paid, pending
+  siteId           String?
+  site             Site?    @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  allocationType   String   @default("unallocated") // plant_specific, shared, unallocated
+  allocationMethod String?  // actual_usage, production_volume, operating_hours, manual
+  voucherNumber    String?
+  invoiceNumber    String?
+  vendorName       String?
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model Site {
@@ -133,6 +143,9 @@ model Site {
   materialInwards MaterialInward[]
   scraps          Scrap[]
   overheadEntries OverheadEntry[]
+  expenses        Expense[]
+  billOfMaterials BillOfMaterial[]
+  employees       Employee[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
 }
@@ -163,6 +176,8 @@ model Employee {
   salary       Float
   status       String       @default("active") // active, inactive
   joinedDate   DateTime     @default(now())
+  siteId       String?
+  site         Site?        @relation(fields: [siteId], references: [id], onDelete: SetNull)
   tenantId     String
   tenant       Tenant       @relation(fields: [tenantId], references: [id])
   attendances  Attendance[]
@@ -193,6 +208,7 @@ model Vehicle {
   lastService  DateTime?
   vehicleType  String?
   driver       String?
+  rentalAmount Float?            @default(0)
   siteId       String?
   site         Site?             @relation(fields: [siteId], references: [id])
   tenantId     String
@@ -450,3 +466,69 @@ model CustomColumn {
   tenant    Tenant   @relation(fields: [tenantId], references: [id])
   createdAt DateTime @default(now())
 }
+
+model BillOfMaterial {
+  id                 String        @id @default(uuid())
+  code               String?       // e.g. BOM-M25-01
+  name               String        // e.g. Standard M25 Mix Design
+  gradeId            String?
+  gradeName          String        // e.g. M25, M30
+  siteId             String?
+  site               Site?         @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  version            Int           @default(1)
+  status             String        @default("draft") // draft, pending_approval, approved, archived
+  effectiveFrom      DateTime      @default(now())
+  effectiveTo        DateTime?
+  approvedBy         String?
+  approvedAt         DateTime?
+  remarks            String?
+  targetSlump        String?       // e.g. 120-150 mm
+  density            Float?        // e.g. 2400 kg/m3
+  standardCostPerCuM Float         @default(0)
+  items              BOMItem[]
+  revisions          BOMRevision[]
+  tenantId           String
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([tenantId, gradeName])
+  @@index([tenantId, status])
+}
+
+model BOMItem {
+  id               String         @id @default(uuid())
+  bomId            String
+  bom              BillOfMaterial @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  materialName     String         // Cement (OPC 53), 20mm Aggregate, 10mm Aggregate, Sand, Fly Ash, Admixture, Water
+  materialCategory String?        // Cementitious, Coarse Aggregate, Fine Aggregate, Water, Chemical Admixture
+  standardQty      Float          // Standard qty per 1 CuM
+  unit             String         // kg, L, MT, bags
+  wastagePercent   Float          @default(0) // e.g. 1.5%
+  standardRate     Float          @default(0) // Standard ₹ per unit
+  standardCost     Float          @default(0) // standardQty * (1 + wastage%/100) * standardRate
+  tenantId         String
+  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([bomId])
+}
+
+model BOMRevision {
+  id             String         @id @default(uuid())
+  bomId          String
+  bom            BillOfMaterial @relation(fields: [bomId], references: [id], onDelete: Cascade)
+  revisionNumber Int
+  changeReason   String?
+  previousCost   Float?
+  newCost        Float?
+  changedBy      String?
+  snapshot       Json           // Complete JSON snapshot of items and rates
+  createdAt      DateTime       @default(now())
+  tenantId       String
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([bomId])
+}
+

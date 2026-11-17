@@ -4,6 +4,8 @@ import {
   Search,
   User,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Calendar,
   MapPin,
   Moon,
@@ -42,6 +44,13 @@ import { fetchStats } from "../../services/api"
 interface NavbarProps {
   activeModule: string
   onModuleChange: (moduleId: string) => void
+  canGoBack?: boolean
+  canGoForward?: boolean
+  onGoBack?: () => void
+  onGoForward?: () => void
+  prevModuleTitle?: string
+  nextModuleTitle?: string
+  currentModuleTitle?: string
 }
 
 interface NotificationItem {
@@ -54,7 +63,17 @@ interface NotificationItem {
   createdAt: string
 }
 
-export function Navbar({ activeModule, onModuleChange }: NavbarProps) {
+export function Navbar({
+  activeModule,
+  onModuleChange,
+  canGoBack = false,
+  canGoForward = false,
+  onGoBack,
+  onGoForward,
+  prevModuleTitle,
+  nextModuleTitle,
+  currentModuleTitle
+}: NavbarProps) {
   const { theme, setTheme } = useTheme()
   const { user, logout, isAuthenticated } = useAuth()
   const { dateRange, setDateRange } = useDateRange()
@@ -159,7 +178,7 @@ export function Navbar({ activeModule, onModuleChange }: NavbarProps) {
         </Sheet>
         
         {/* Logo */}
-        <div className="flex items-center gap-2 mr-4 hidden md:flex">
+        <div className="flex items-center gap-2 mr-2 hidden md:flex">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-blue-700 text-white">
             <span className="font-bold">AM</span>
           </div>
@@ -168,6 +187,41 @@ export function Navbar({ activeModule, onModuleChange }: NavbarProps) {
             <p className="text-xs text-muted-foreground">Operations Control Center</p>
           </div>
         </div>
+
+        {/* Top History Navigation (Back & Forward with Tooltips & Shortcuts) */}
+        <div className="flex items-center gap-1 bg-muted/60 p-0.5 rounded-lg border border-border/70 shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onGoBack}
+            disabled={!canGoBack}
+            className="h-8 w-8 p-0 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:bg-background hover:shadow-xs transition-all"
+            title={canGoBack ? `Back to ${prevModuleTitle || 'previous page'} (Alt + ←)` : "Back (Alt + ←)"}
+          >
+            <ChevronLeft className="h-4 w-4" />
+            <span className="sr-only">Go Back</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onGoForward}
+            disabled={!canGoForward}
+            className="h-8 w-8 p-0 text-foreground disabled:opacity-30 disabled:cursor-not-allowed hover:bg-background hover:shadow-xs transition-all"
+            title={canGoForward ? `Forward to ${nextModuleTitle || 'next page'} (Alt + →)` : "Forward (Alt + →)"}
+          >
+            <ChevronRight className="h-4 w-4" />
+            <span className="sr-only">Go Forward</span>
+          </Button>
+        </div>
+
+        {/* Current Active Location Badge */}
+        {currentModuleTitle && (
+          <div className="hidden xl:flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-md bg-muted/30 border border-border/40 font-medium text-muted-foreground shrink-0 select-none">
+            <span className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">Viewing:</span>
+            <span className="text-foreground font-semibold">{currentModuleTitle}</span>
+          </div>
+        )}
 
         {/* Search Bar */}
         <div className="flex-1 max-w-md">
