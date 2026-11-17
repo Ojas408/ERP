@@ -211,6 +211,8 @@ export function VehicleMovementChart() {
                 border: "1px solid hsl(var(--border))",
                 borderRadius: "8px",
               }}
+              itemStyle={{ color: 'hsl(var(--foreground))' }}
+              labelStyle={{ color: 'hsl(var(--foreground))' }}
             />
             <Legend />
             <Area
