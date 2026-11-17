@@ -10,6 +10,7 @@ import {
   Building2,
   TrendingUp,
   DollarSign,
+  IndianRupee,
   Plus,
   Edit,
   Trash2,
@@ -565,7 +566,7 @@ export default function Projects({ onNavigate }: ProjectsProps) {
           title="On Hold"
           value={holdCount.toString()}
           subtitle="awaiting review or permit"
-          icon={DollarSign}
+          icon={IndianRupee}
           colorClass="bg-orange-100 dark:bg-orange-900/30"
         />
       </div>

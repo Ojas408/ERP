@@ -9,7 +9,7 @@ import {
   Package, 
   AlertTriangle, 
   TrendingUp, 
-  DollarSign, 
+  IndianRupee, 
   Upload, 
   Download, 
   Plus, 
@@ -466,7 +466,7 @@ export default function Inventory() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <KPICard title="Total Materials" value={totalItemsCount.toString()} subtitle="Unique catalogs" icon={Package} colorClass="bg-blue-100 dark:bg-blue-900/30" />
         <KPICard title="Low Stock Alerts" value={lowStockCount.toString()} subtitle="Restocking required" icon={AlertTriangle} colorClass="bg-red-100 dark:bg-red-900/30" />
-        <KPICard title="Total Stock Value" value={`₹${totalValuation.toLocaleString()}`} subtitle="Valuation sum" icon={DollarSign} colorClass="bg-green-100 dark:bg-green-900/30" />
+        <KPICard title="Total Stock Value" value={`₹${totalValuation.toLocaleString()}`} subtitle="Valuation sum" icon={IndianRupee} colorClass="bg-green-100 dark:bg-green-900/30" />
         <KPICard title="Category Indices" value={categories.length.toString()} subtitle="Master groups" icon={TrendingUp} colorClass="bg-purple-100 dark:bg-purple-900/30" />
       </div>
 

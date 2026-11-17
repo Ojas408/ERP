@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
 import { 
-  DollarSign, 
+  IndianRupee, 
   TrendingUp, 
   TrendingDown, 
   CreditCard, 
@@ -408,7 +408,7 @@ export default function Expenses() {
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Expenses" value={`₹${totalExpensesAmount.toLocaleString()}`} subtitle="overall logged transactions" icon={DollarSign} colorClass="bg-red-50 text-red-600" />
+        <KPICard title="Total Expenses" value={`₹${totalExpensesAmount.toLocaleString()}`} subtitle="overall logged transactions" icon={IndianRupee} colorClass="bg-red-50 text-red-600" />
         <KPICard title="Fuel Expenses" value={`₹${fuelCosts.toLocaleString()}`} subtitle="diesel & generator costs" icon={TrendingUp} colorClass="bg-orange-50 text-orange-600" />
         <KPICard title="Machinery Maintenance" value={`₹${maintenanceCosts.toLocaleString()}`} subtitle="repairs & breakdowns" icon={CreditCard} colorClass="bg-blue-50 text-blue-600" />
         <KPICard title="Unpaid / Pending" value={`₹${pendingAmount.toLocaleString()}`} subtitle="awaiting settlement" icon={TrendingDown} colorClass="bg-yellow-50 text-yellow-600" />
