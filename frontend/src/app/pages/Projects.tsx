@@ -358,23 +358,24 @@ export default function Projects({ onNavigate }: ProjectsProps) {
             Template
           </Button>
 
-          <label className="cursor-pointer">
-            <span className="inline-flex items-center justify-center rounded-md text-xs font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 py-2">
+          <Button variant="outline" size="sm" className="text-xs h-9 cursor-pointer" asChild>
+            <label>
+              <Upload className="h-4 w-4 mr-1.5 text-blue-600" />
               Import Excel
-            </span>
-            <input
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) {
-                  handleExcelImport(file)
-                }
-                e.target.value = ""
-              }}
-            />
-          </label>
+              <input
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) {
+                    handleExcelImport(file)
+                  }
+                  e.target.value = ""
+                }}
+              />
+            </label>
+          </Button>
 
           <Button variant="outline" size="sm" className="text-xs h-9" onClick={handleExportExcel}>
             Export Excel

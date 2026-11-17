@@ -5,7 +5,10 @@ import prisma from '../lib/prisma';
 export const getVendors = async (req: AuthRequest, res: Response) => {
   try {
     const tenantId = req.user!.tenantId;
-    const vendors = await prisma.vendor.findMany({ where: { tenantId } });
+    const vendors = await prisma.vendor.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'desc' },
+    });
     res.json(vendors);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching vendors' });
@@ -14,6 +17,26 @@ export const getVendors = async (req: AuthRequest, res: Response) => {
 
 export const createVendor = async (req: AuthRequest, res: Response) => {
   const tenantId = req.user!.tenantId;
+  if (Array.isArray(req.body)) {
+    try {
+      const records = req.body
+        .filter((item: any) => item && item.name && String(item.name).trim() !== '')
+        .map((item: any) => ({
+          tenantId,
+          name: String(item.name).trim(),
+          contact: item.contact ? String(item.contact).trim() : null,
+          category: item.category ? String(item.category).trim() : 'General Supplier',
+        }));
+      if (records.length === 0) {
+        return res.status(400).json({ message: 'No valid vendor records provided' });
+      }
+      await prisma.vendor.createMany({ data: records });
+      return res.status(201).json({ message: 'Vendors imported successfully', count: records.length });
+    } catch (error) {
+      return res.status(500).json({ message: 'Error importing vendors' });
+    }
+  }
+
   const { name, contact, category } = req.body;
   try {
     const vendor = await prisma.vendor.create({
