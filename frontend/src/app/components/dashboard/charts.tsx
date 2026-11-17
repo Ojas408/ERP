@@ -94,6 +94,8 @@ export function ProductionTrendChart({ data }: { data?: any[] }) {
                 border: "1px solid hsl(var(--border))",
                 borderRadius: "8px",
               }}
+              itemStyle={{ color: 'hsl(var(--foreground))' }}
+              labelStyle={{ color: 'hsl(var(--foreground))' }}
             />
             <Legend />
             <Line
@@ -138,6 +140,8 @@ export function ConsumptionChart({ data }: { data?: any[] }) {
                 border: "1px solid hsl(var(--border))",
                 borderRadius: "8px",
               }}
+              itemStyle={{ color: 'hsl(var(--foreground))' }}
+              labelStyle={{ color: 'hsl(var(--foreground))' }}
             />
             <Legend />
             <Bar dataKey="amount" fill="#3b82f6" name="Actual" />
@@ -262,6 +266,8 @@ export function TargetAchievementChart() {
                 border: "1px solid hsl(var(--border))",
                 borderRadius: "8px",
               }}
+              itemStyle={{ color: 'hsl(var(--foreground))' }}
+              labelStyle={{ color: 'hsl(var(--foreground))' }}
             />
             <Legend />
             <Bar dataKey="target" fill="#f59e0b" name="Target" />

@@ -10,6 +10,7 @@ import { Badge } from "../components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog"
 import {
   DollarSign,
+  IndianRupee,
   RefreshCw,
   Factory,
   Fuel,
@@ -644,7 +645,7 @@ export default function OverheadReportPage({ onNavigate }: OverheadReportProps =
             title="Other Expenses"
             value={inr(exec.totalOtherExpenses || 0)}
             subtitle="Admin & Misc"
-            icon={DollarSign}
+            icon={IndianRupee}
             colorClass="bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
             onClick={() => onNavigate ? onNavigate("expense") : scrollToSection("section-3-category-table")}
             destinationLabel="Expenses Module ↗"
@@ -653,11 +654,10 @@ export default function OverheadReportPage({ onNavigate }: OverheadReportProps =
             title="PURE TOTAL OVERHEAD"
             value={inr(pureOverhead)}
             subtitle="Total Overhead (A)"
-            icon={DollarSign}
-            colorClass="bg-blue-600 text-white"
+            icon={IndianRupee}
+            colorClass="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
             onClick={() => scrollToSection("section-3-category-table")}
             destinationLabel="Category Cost Table (Sec 3) ↓"
-            highlight={true}
           />
           <OverheadKPICard
             title="Direct Material Cost"
@@ -676,7 +676,6 @@ export default function OverheadReportPage({ onNavigate }: OverheadReportProps =
             colorClass="bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300"
             onClick={() => scrollToSection("section-3-category-table")}
             destinationLabel="Operating Cost Table (Sec 3) ↓"
-            highlight={true}
           />
           <OverheadKPICard
             title="OVERHEAD ₹ / CuM"
@@ -857,7 +856,7 @@ export default function OverheadReportPage({ onNavigate }: OverheadReportProps =
                     <TableHead className="text-xs">Type</TableHead>
                     <TableHead className="text-xs">Plant</TableHead>
                     <TableHead className="text-xs text-right">Maintenance Cost</TableHead>
-                    <TableHead className="text-xs text-right text-purple-700 dark:text-purple-400 font-semibold">Rental Amount</TableHead>
+                    <TableHead className="text-xs text-right">Rental Amount</TableHead>
                     <TableHead className="text-xs text-right">Total Cost</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -868,7 +867,7 @@ export default function OverheadReportPage({ onNavigate }: OverheadReportProps =
                       <TableCell className="text-xs text-muted-foreground">{e.type}</TableCell>
                       <TableCell className="text-xs">{e.plant}</TableCell>
                       <TableCell className="text-xs text-right">{inr(e.maintenanceCost)}</TableCell>
-                      <TableCell className="text-xs text-right font-medium text-purple-700 dark:text-purple-400 font-mono">
+                      <TableCell className="text-xs text-right font-medium font-mono">
                         {e.rentalCost > 0 ? inr(e.rentalCost) : "₹0"}
                       </TableCell>
                       <TableCell className="text-xs text-right font-semibold">{inr(e.totalCost)}</TableCell>

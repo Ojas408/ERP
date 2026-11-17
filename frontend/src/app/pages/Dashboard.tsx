@@ -24,6 +24,7 @@ import {
 import {
   Factory,
   DollarSign,
+  IndianRupee,
   TrendingUp,
   Truck,
   Target,
@@ -110,7 +111,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           title="Disbursed Expenses"
           value={stats ? `₹${(stats.totalExpenses || 0).toLocaleString()}` : "₹0"}
           subtitle="settled cash outflows"
-          icon={DollarSign}
+          icon={IndianRupee}
           colorClass="bg-orange-50 text-orange-600 border border-orange-100"
           onClick={() => onNavigate?.('expense')}
         />
